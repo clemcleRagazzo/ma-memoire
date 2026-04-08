@@ -1,6 +1,8 @@
 package com.moulis.mamemoire
 
 import android.Manifest
+import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -10,68 +12,179 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.edit
+import com.moulis.mamemoire.repositories.GameRepository
+import androidx.core.app.RemoteInput as RemoteInputCompat
 
 class NotificationReceiver : BroadcastReceiver() {
+
+    companion object {
+        const val KEY_REPLY_TEXT = "key_reply_text"
+        const val ACTION_REPLY   = "ACTION_REPLY_EVENING"
+    }
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.d("MemoryApp", "Broadcast reçu ! Action: ${intent.action}")
         when (intent.action) {
             "MORNING_NOTIFICATION" -> sendMorningNotification(context)
             "EVENING_NOTIFICATION" -> sendEveningNotification(context)
+            ACTION_REPLY           -> handleReply(context, intent)
         }
     }
+
+    // ─── Matin ────────────────────────────────────────────────────────────────
 
     private fun sendMorningNotification(context: Context) {
         val randomNumber = (1000..9999).random()
-        context.getSharedPreferences("MemoryApp", Context.MODE_PRIVATE).edit {
-            putInt("morning_number", randomNumber)
-        }
+        GameRepository.saveMorningNumber(context, randomNumber)
         Log.d("MemoryApp", "Nombre généré : $randomNumber")
 
         val messages = listOf(
-            "Bonjour ! Votre défi du jour est le : $randomNumber",
-            "C'est l'heure ! Mémorisez bien ce nombre : $randomNumber",
-            "Nouvelle journée, nouveau nombre : $randomNumber. Bonne chance !",
-            "Gardez ce nombre en tête pour ce soir : $randomNumber"
+            "Votre défi du jour : $randomNumber. Mémorisez-le bien !",
+            "C'est l'heure ! Gravez ce nombre dans votre mémoire : $randomNumber",
+            "Nouvelle journée, nouveau défi : $randomNumber 🧠",
+            "Gardez ce nombre en tête jusqu'à ce soir : $randomNumber"
         )
-        showNotification(context, MemoryApp.MORNING_NOTIFICATION_ID, "Nombre du jour 🧠", messages.random())
+        showNotification(
+            context,
+            MemoryApp.MORNING_NOTIFICATION_ID,
+            "Nombre du jour 🧠",
+            messages.random()
+        )
     }
 
+    // ─── Soir ─────────────────────────────────────────────────────────────────
+
     private fun sendEveningNotification(context: Context) {
-        val sharedPreferences = context.getSharedPreferences("MemoryApp", Context.MODE_PRIVATE)
-        val storedNumber = sharedPreferences.getInt("morning_number", -1)
-        Log.d("MemoryApp", "Nombre récupéré : $storedNumber")
+        val morningNumber = GameRepository.getMorningNumber(context)
+        Log.d("MemoryApp", "Nombre récupéré pour le soir : $morningNumber")
+
+        if (morningNumber == -1) {
+            Log.e("MemoryApp", "Aucun nombre du matin trouvé !")
+            return
+        }
 
         val messages = listOf(
             "Alors, quel était le nombre de ce matin ? 🤔",
-            "C'est l'heure du test ! Vous souvenez-vous du nombre ?",
-            "La journée se termine. Le nombre était-il bien $storedNumber ?"
+            "C'est l'heure du test ! Vous souvenez-vous ?",
+            "La journée se termine. Quel était le nombre ?"
         )
-        showNotification(context, MemoryApp.EVENING_NOTIFICATION_ID, "Souvenez-vous 🧐", messages.random())
+
+        // Intent pour la réponse inline
+        val replyIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = ACTION_REPLY
+        }
+        val replyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            99,
+            replyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val remoteInput = RemoteInputCompat.Builder(KEY_REPLY_TEXT)
+            .setLabel("Votre réponse...")
+            .build()
+
+        val replyAction = NotificationCompat.Action.Builder(
+            android.R.drawable.ic_menu_send,
+            "Répondre",
+            replyPendingIntent
+        ).addRemoteInput(remoteInput).build()
+
+        showNotificationWithAction(
+            context,
+            MemoryApp.EVENING_NOTIFICATION_ID,
+            "Souvenez-vous 🧐",
+            messages.random(),
+            replyAction
+        )
+    }
+
+    // ─── Traitement de la réponse inline ──────────────────────────────────────
+
+    private fun handleReply(context: Context, intent: Intent) {
+        val bundle = RemoteInput.getResultsFromIntent(intent) ?: return
+        val replyText = bundle.getCharSequence(KEY_REPLY_TEXT)?.toString()?.trim() ?: return
+
+        val playerAnswer = replyText.toIntOrNull()
+        if (playerAnswer == null) {
+            showNotification(
+                context,
+                MemoryApp.EVENING_NOTIFICATION_ID,
+                "Réponse invalide ❌",
+                "Merci d'entrer uniquement un nombre à 4 chiffres."
+            )
+            return
+        }
+
+        GameRepository.saveAnswer(context, playerAnswer)
+
+        val morningNumber = GameRepository.getMorningNumber(context)
+        val score         = GameRepository.calculateScore(morningNumber, playerAnswer)
+        val ratio         = (score * 100) / 4
+        val isWon         = score == 4
+
+        val resultMessage = buildResultMessage(morningNumber, playerAnswer, score, ratio, isWon)
+
+        showNotification(
+            context,
+            MemoryApp.EVENING_NOTIFICATION_ID,
+            if (isWon) "Bravo ! 🎉" else "Résultat du jour",
+            resultMessage
+        )
+        Log.d("MemoryApp", "Réponse enregistrée : $playerAnswer | Score: $score/4 | Ratio: $ratio%")
+    }
+
+    // ─── Utilitaires ──────────────────────────────────────────────────────────
+
+    fun buildResultMessage(
+        morningNumber: Int,
+        playerAnswer: Int,
+        score: Int,
+        ratio: Int,
+        isWon: Boolean
+    ): String {
+        return if (isWon) {
+            "Parfait ! Le nombre était bien $morningNumber. 100% de réussite 🏆"
+        } else {
+            "Le nombre était $morningNumber, vous avez répondu $playerAnswer. $score/4 chiffres corrects ($ratio%)"
+        }
     }
 
     private fun showNotification(context: Context, id: Int, title: String, text: String) {
-        // La permission n'est obligatoire qu'à partir d'Android 13 (API 33)
+        showNotificationWithAction(context, id, title, text, null)
+    }
+
+    private fun showNotificationWithAction(
+        context: Context,
+        id: Int,
+        title: String,
+        text: String,
+        action: NotificationCompat.Action?
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(
+                    context, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 Log.e("MemoryApp", "ERREUR : Permission POST_NOTIFICATIONS non accordée !")
                 return
             }
         }
 
-        val notification = NotificationCompat.Builder(context, MemoryApp.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Utilise une icône système par défaut pour être sûr
+        val builder = NotificationCompat.Builder(context, MemoryApp.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
-            .build()
+
+        action?.let { builder.addAction(it) }
 
         try {
-            NotificationManagerCompat.from(context).notify(id, notification)
-            Log.d("MemoryApp", "Notification envoyée avec succès : $title")
+            NotificationManagerCompat.from(context).notify(id, builder.build())
+            Log.d("MemoryApp", "Notification envoyée : $title")
         } catch (e: Exception) {
             Log.e("MemoryApp", "Erreur lors de l'envoi : ${e.message}")
         }

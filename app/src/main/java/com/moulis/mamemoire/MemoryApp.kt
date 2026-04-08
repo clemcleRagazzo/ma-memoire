@@ -59,16 +59,14 @@ class MemoryApp : Application() { // On ajoute l'héritage ici
     }
 
     fun createNotificationChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Mémoire - Rappels",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications pour l'entraînement de la mémoire"
-            }
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Mémoire - Rappels",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notifications pour l'entraînement de la mémoire"
         }
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 }
