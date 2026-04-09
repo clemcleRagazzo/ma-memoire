@@ -1,5 +1,6 @@
 package com.moulis.mamemoire
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.Application
 import android.app.NotificationChannel
@@ -34,9 +35,7 @@ class MemoryApp : Application() { // On ajoute l'héritage ici
             }
 
             val pendingIntent = PendingIntent.getBroadcast(
-                this,
-                hour,
-                intent,
+                this, hour, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
@@ -44,15 +43,17 @@ class MemoryApp : Application() { // On ajoute l'héritage ici
                 set(Calendar.HOUR_OF_DAY, hour)
                 set(Calendar.MINUTE, 0)
                 set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
                 if (before(Calendar.getInstance())) {
                     add(Calendar.DAY_OF_YEAR, 1)
                 }
             }
 
-            alarmManager.setRepeating(
+            // Version fiable mais pas "exacte" : pas de permission requise, pas de crash.
+            // L'OS lancera la notif quand il peut (marge de 1 à 10 min max).
+            alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 calendar.timeInMillis,
-                AlarmManager.INTERVAL_DAY,
                 pendingIntent
             )
         }

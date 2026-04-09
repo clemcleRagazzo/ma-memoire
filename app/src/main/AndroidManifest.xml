@@ -31,6 +31,9 @@
             android:name="com.moulis.mamemoire.NotificationReceiver"
             android:exported="true">
             <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+
                 <action android:name="ACTION_REPLY_EVENING" />
                 <action android:name="MORNING_NOTIFICATION" />
                 <action android:name="EVENING_NOTIFICATION" />

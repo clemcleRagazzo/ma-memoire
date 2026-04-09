@@ -23,7 +23,15 @@ class NotificationReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("MemoryApp", "Broadcast reçu ! Action: ${intent.action}")
+        Log.d("MemoryApp", "Broadcast reçu ! Action: ${intent.action}")// Reprogramme tout au Boot ou après mise à jour
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
+            intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            (context.applicationContext as? MemoryApp)?.scheduleNotifications()
+            return
+        }
+
+        (context.applicationContext as? MemoryApp)?.scheduleNotifications()
+
         when (intent.action) {
             "MORNING_NOTIFICATION" -> sendMorningNotification(context)
             "EVENING_NOTIFICATION" -> sendEveningNotification(context)
