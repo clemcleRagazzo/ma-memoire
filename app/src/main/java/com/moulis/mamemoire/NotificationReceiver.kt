@@ -33,8 +33,8 @@ class NotificationReceiver : BroadcastReceiver() {
         (context.applicationContext as? MemoryApp)?.scheduleNotifications()
 
         when (intent.action) {
-            "MORNING_NOTIFICATION" -> sendMorningNotification(context)
-            "EVENING_NOTIFICATION" -> sendEveningNotification(context)
+            MemoryApp.ACTION_MORNING -> sendMorningNotification(context)
+            MemoryApp.ACTION_EVENING -> sendEveningNotification(context)
             ACTION_REPLY           -> handleReply(context, intent)
         }
     }
@@ -85,7 +85,7 @@ class NotificationReceiver : BroadcastReceiver() {
             context,
             99,
             replyIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )
 
         val remoteInput = RemoteInputCompat.Builder(KEY_REPLY_TEXT)
@@ -110,7 +110,7 @@ class NotificationReceiver : BroadcastReceiver() {
     // ─── Traitement de la réponse inline ──────────────────────────────────────
 
     private fun handleReply(context: Context, intent: Intent) {
-        val bundle = RemoteInput.getResultsFromIntent(intent) ?: return
+        val bundle = RemoteInputCompat.getResultsFromIntent(intent) ?: return
         val replyText = bundle.getCharSequence(KEY_REPLY_TEXT)?.toString()?.trim() ?: return
 
         val playerAnswer = replyText.toIntOrNull()

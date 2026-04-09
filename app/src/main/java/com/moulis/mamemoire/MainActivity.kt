@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
 /** true si on est entre 18h00 et 23h59 */
 private fun isEveningTime(): Boolean {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return hour >= 18
+    return hour >= MemoryApp.EVENING_HOUR
 }
 
 // ─── UI principale ────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ fun HomeScreen(
             label         = {
                 Text(
                     if (!hasMorningNumber) "Aucun nombre reçu ce matin"
-                    else if (!isEvening)   "Disponible à partir de 18h"
+                    else if (!isEvening)   "Disponible à partir de ${MemoryApp.EVENING_HOUR}h"
                     else if (alreadyAnswered) "Déjà répondu aujourd'hui ✓"
                     else "Entrez le nombre mémorisé"
                 )
@@ -238,8 +238,8 @@ fun StatusCard(hasMorningNumber: Boolean, alreadyAnswered: Boolean, isEvening: B
     val (emoji, text, bgColor) = when {
         alreadyAnswered  -> Triple("✅", "Défi du jour complété !", Color(0xFF4CAF50).copy(alpha = 0.12f))
         isEvening && hasMorningNumber -> Triple("🎯", "C'est l'heure ! Entrez votre réponse ci-dessous.", Color(0xFFFF9800).copy(alpha = 0.12f))
-        hasMorningNumber && !isEvening -> Triple("⏳", "Nombre reçu ce matin. Revenez à 18h pour répondre !", Color(0xFF2196F3).copy(alpha = 0.12f))
-        else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à 8h demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
+        hasMorningNumber -> Triple("⏳", "Nombre reçu ce matin. Revenez à ${MemoryApp.EVENING_HOUR}h pour répondre !", Color(0xFF2196F3).copy(alpha = 0.12f))
+        else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à ${MemoryApp.MORNING_HOUR} demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
     }
 
     Card(

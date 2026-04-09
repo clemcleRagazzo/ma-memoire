@@ -11,12 +11,20 @@ import android.content.Intent
 import android.os.Build
 import java.util.*
 
-class MemoryApp : Application() { // On ajoute l'héritage ici
+class MemoryApp : Application() {
 
     companion object {
         const val CHANNEL_ID = "memory_channel"
         const val MORNING_NOTIFICATION_ID = 1
         const val EVENING_NOTIFICATION_ID = 2
+        
+        // Heures configurables
+        const val MORNING_HOUR = 9
+        const val EVENING_HOUR = 18
+
+        const val ACTION_MORNING = "MORNING_NOTIFICATION"
+        const val ACTION_EVENING = "EVENING_NOTIFICATION"
+
     }
 
     override fun onCreate() {
@@ -27,11 +35,15 @@ class MemoryApp : Application() { // On ajoute l'héritage ici
 
     fun scheduleNotifications() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val hours = listOf(8, 18)
+        
+        val notificationConfigs = listOf(
+            MORNING_HOUR to ACTION_MORNING,
+            EVENING_HOUR to ACTION_EVENING
+        )
 
-        hours.forEach { hour ->
+        notificationConfigs.forEach { (hour, actionName) ->
             val intent = Intent(this, NotificationReceiver::class.java).apply {
-                action = if (hour == 8) "MORNING_NOTIFICATION" else "EVENING_NOTIFICATION"
+                action = actionName
             }
 
             val pendingIntent = PendingIntent.getBroadcast(
