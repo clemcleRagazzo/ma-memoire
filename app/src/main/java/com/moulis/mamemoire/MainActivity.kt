@@ -239,7 +239,7 @@ fun StatusCard(hasMorningNumber: Boolean, alreadyAnswered: Boolean, isEvening: B
         alreadyAnswered  -> Triple("✅", "Défi du jour complété !", Color(0xFF4CAF50).copy(alpha = 0.12f))
         isEvening && hasMorningNumber -> Triple("🎯", "C'est l'heure ! Entrez votre réponse ci-dessous.", Color(0xFFFF9800).copy(alpha = 0.12f))
         hasMorningNumber -> Triple("⏳", "Nombre reçu ce matin. Revenez à ${MemoryApp.EVENING_HOUR}h pour répondre !", Color(0xFF2196F3).copy(alpha = 0.12f))
-        else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à ${MemoryApp.MORNING_HOUR} demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
+        else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à ${MemoryApp.MORNING_HOUR}h demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
     }
 
     Card(

@@ -78,6 +78,9 @@ class MemoryApp : Application() {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Notifications pour l'entraînement de la mémoire"
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            enableLights(true)
+            enableVibration(true)
         }
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)

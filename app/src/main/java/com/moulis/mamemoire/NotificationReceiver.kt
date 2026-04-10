@@ -23,18 +23,26 @@ class NotificationReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("MemoryApp", "Broadcast reçu ! Action: ${intent.action}")// Reprogramme tout au Boot ou après mise à jour
+        Log.d("MemoryApp", "Broadcast reçu ! Action: ${intent.action}")
+        
+        // On ne reprogramme que sur les événements système critiques
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             (context.applicationContext as? MemoryApp)?.scheduleNotifications()
             return
         }
 
-        (context.applicationContext as? MemoryApp)?.scheduleNotifications()
-
         when (intent.action) {
-            MemoryApp.ACTION_MORNING -> sendMorningNotification(context)
-            MemoryApp.ACTION_EVENING -> sendEveningNotification(context)
+            MemoryApp.ACTION_MORNING -> {
+                sendMorningNotification(context)
+                // Optionnel : on prépare la suivante pour demain
+                (context.applicationContext as? MemoryApp)?.scheduleNotifications()
+            }
+            MemoryApp.ACTION_EVENING -> {
+                sendEveningNotification(context)
+                // Optionnel : on prépare la suivante pour demain
+                (context.applicationContext as? MemoryApp)?.scheduleNotifications()
+            }
             ACTION_REPLY           -> handleReply(context, intent)
         }
     }
@@ -185,6 +193,7 @@ class NotificationReceiver : BroadcastReceiver() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
 
