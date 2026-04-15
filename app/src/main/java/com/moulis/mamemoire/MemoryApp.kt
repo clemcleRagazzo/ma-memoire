@@ -62,12 +62,22 @@ class MemoryApp : Application() {
             }
 
             // Version fiable mais pas "exacte" : pas de permission requise, pas de crash.
-            // L'OS lancera la notif quand il peut (marge de 1 à 10 min max).
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
+            // L'OS lancera la notif quand il peut (marge de quelques minutes).
+            try {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    pendingIntent
+                )
+            } catch (e: Exception) {
+                // Sur certains émulateurs ou versions, setAndAllowWhileIdle peut lancer une exception
+                // si le système est très restrictif. On se rabat sur set.
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    pendingIntent
+                )
+            }
         }
     }
 
