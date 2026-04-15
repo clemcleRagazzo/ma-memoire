@@ -19,7 +19,7 @@ class MemoryApp : Application() {
         const val EVENING_NOTIFICATION_ID = 2
         
         // Heures configurables
-        const val MORNING_HOUR = 9
+        const val MORNING_HOUR = 8
         const val EVENING_HOUR = 18
 
         const val ACTION_MORNING = "MORNING_NOTIFICATION"
