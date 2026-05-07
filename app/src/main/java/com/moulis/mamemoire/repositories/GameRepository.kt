@@ -45,9 +45,12 @@ object GameRepository {
     }
 
     fun todayAlreadyAnswered(context: Context): Boolean {
+        return getTodayEntry(context) != null
+    }
+
+    fun getTodayEntry(context: Context): GameEntry? {
         val today = dateFormat.format(Date())
-        val history = getHistory(context)
-        return history.any { it.date == today && it.playerAnswer != null }
+        return getHistory(context).find { it.date == today && it.playerAnswer != null }
     }
 
     fun isRevealed(context: Context): Boolean {
@@ -74,6 +77,8 @@ object GameRepository {
     // ─── Sauvegarde d'une réponse ─────────────────────────────────────────────
 
     fun saveAnswer(context: Context, playerAnswer: Int) {
+        if (todayAlreadyAnswered(context)) return // Sécurité : pas de double réponse
+
         val morningNumber = getMorningNumber(context)
         if (morningNumber == -1) return
 

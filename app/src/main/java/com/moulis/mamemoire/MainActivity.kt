@@ -98,8 +98,12 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
     var answerInput by remember { mutableStateOf("") }
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
 
+    val todayEntry = history.find { 
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        it.date == today && it.playerAnswer != null 
+    }
     val hasMorningNumber = GameRepository.todayHasMorningNumber(context)
-    val alreadyAnswered  = GameRepository.todayAlreadyAnswered(context)
+    val alreadyAnswered  = todayEntry != null
     val isEvening        = forceEvening || isEveningTime()
 
     // Champ dispo uniquement le soir + nombre reçu + pas encore répondu
@@ -130,7 +134,7 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
             0 -> HomeScreen(
                 modifier        = Modifier.padding(padding),
                 hasMorningNumber = hasMorningNumber,
-                alreadyAnswered  = alreadyAnswered,
+                todayEntry      = todayEntry,
                 isEvening        = isEvening,
                 fieldEnabled     = fieldEnabled,
                 answerInput      = answerInput,
@@ -169,7 +173,7 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
 fun HomeScreen(
     modifier: Modifier,
     hasMorningNumber: Boolean,
-    alreadyAnswered: Boolean,
+    todayEntry: GameEntry?,
     isEvening: Boolean,
     fieldEnabled: Boolean,
     answerInput: String,
@@ -197,6 +201,7 @@ fun HomeScreen(
         // ── Statut du jour ──
         val context = LocalContext.current
         val isAlreadyRevealed = remember { GameRepository.isRevealed(context) }
+        val alreadyAnswered = todayEntry != null
 
         if (hasMorningNumber && !alreadyAnswered && !isAlreadyRevealed) {
             val morningNumber = GameRepository.getMorningNumber(context)
@@ -205,7 +210,7 @@ fun HomeScreen(
                 initiallyRevealed = initialReveal
             )
         } else {
-            StatusCard(hasMorningNumber, alreadyAnswered, isEvening)
+            StatusCard(hasMorningNumber, todayEntry, isEvening)
         }
 
         // ── Champ de réponse ──
@@ -359,9 +364,24 @@ fun GrainDissolveOverlay(progress: Float) {
 }
 
 @Composable
-fun StatusCard(hasMorningNumber: Boolean, alreadyAnswered: Boolean, isEvening: Boolean) {
+fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boolean) {
     val (emoji, text, bgColor) = when {
-        alreadyAnswered  -> Triple("✅", "Défi du jour complété !", Color(0xFF4CAF50).copy(alpha = 0.12f))
+        todayEntry != null -> {
+            val score = todayEntry.score
+            val msg = when (score) {
+                4    -> "Parfait ! 4/4 chiffres trouvés 🏆"
+                3    -> "Bien joué ! 3/4 chiffres trouvés 🥈"
+                2    -> "Pas mal ! 2/4 chiffres trouvés 🥉"
+                1    -> "Un peu juste... 1/4 chiffre trouvé 🧱"
+                else -> "Échec total ! 0/4 chiffre trouvé 😅"
+            }
+            val color = when {
+                score == 4 -> Color(0xFF4CAF50) // Vert
+                score >= 2 -> Color(0xFFFF9800) // Orange
+                else       -> Color(0xFFF44336) // Rouge
+            }
+            Triple("✅", "Défi complété : $msg", color.copy(alpha = 0.12f))
+        }
         isEvening && hasMorningNumber -> Triple("🎯", "C'est l'heure ! Entrez votre réponse ci-dessous.", Color(0xFFFF9800).copy(alpha = 0.12f))
         hasMorningNumber -> Triple("⏳", "Nombre reçu ce matin. Revenez à ${MemoryApp.EVENING_HOUR}h pour répondre !", Color(0xFF2196F3).copy(alpha = 0.12f))
         else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à ${MemoryApp.MORNING_HOUR}h demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
