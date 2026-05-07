@@ -14,6 +14,7 @@ object GameRepository {
     private const val KEY_HISTORY = "game_history"
     private const val KEY_MORNING_NUMBER = "morning_number"
     private const val KEY_MORNING_DATE = "morning_date"
+    private const val KEY_REVEALED_DATE = "revealed_date"
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
@@ -24,6 +25,7 @@ object GameRepository {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putInt(KEY_MORNING_NUMBER, number)
             putString(KEY_MORNING_DATE, today)
+            remove(KEY_REVEALED_DATE)
         }
     }
 
@@ -46,6 +48,19 @@ object GameRepository {
         val today = dateFormat.format(Date())
         val history = getHistory(context)
         return history.any { it.date == today && it.playerAnswer != null }
+    }
+
+    fun isRevealed(context: Context): Boolean {
+        val today = dateFormat.format(Date())
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_REVEALED_DATE, null) == today
+    }
+
+    fun setRevealed(context: Context) {
+        val today = dateFormat.format(Date())
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putString(KEY_REVEALED_DATE, today)
+        }
     }
 
     // ─── Calcul du ratio ──────────────────────────────────────────────────────

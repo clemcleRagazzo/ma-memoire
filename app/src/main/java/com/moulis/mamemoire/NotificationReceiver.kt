@@ -20,6 +20,8 @@ class NotificationReceiver : BroadcastReceiver() {
     companion object {
         const val KEY_REPLY_TEXT = "key_reply_text"
         const val ACTION_REPLY   = "ACTION_REPLY_EVENING"
+        const val ACTION_YES     = "ACTION_YES"
+        const val ACTION_NO      = "ACTION_NO"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -35,15 +37,17 @@ class NotificationReceiver : BroadcastReceiver() {
         when (intent.action) {
             MemoryApp.ACTION_MORNING -> {
                 sendMorningNotification(context)
-                // Optionnel : on prépare la suivante pour demain
                 (context.applicationContext as? MemoryApp)?.scheduleNotifications()
             }
             MemoryApp.ACTION_EVENING -> {
                 sendEveningNotification(context)
-                // Optionnel : on prépare la suivante pour demain
                 (context.applicationContext as? MemoryApp)?.scheduleNotifications()
             }
             ACTION_REPLY           -> handleReply(context, intent)
+            ACTION_YES, ACTION_NO  -> {
+                // On peut logger l'engagement ou simplement fermer la notification
+                NotificationManagerCompat.from(context).cancel(MemoryApp.MORNING_NOTIFICATION_ID)
+            }
         }
     }
 
@@ -54,17 +58,28 @@ class NotificationReceiver : BroadcastReceiver() {
         GameRepository.saveMorningNumber(context, randomNumber)
         Log.d("MemoryApp", "Nombre généré : $randomNumber")
 
+        val yesIntent = Intent(context, NotificationReceiver::class.java).apply { action = ACTION_YES }
+        val noIntent  = Intent(context, NotificationReceiver::class.java).apply { action = ACTION_NO }
+
+        val yesPending = PendingIntent.getBroadcast(context, 101, yesIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val noPending  = PendingIntent.getBroadcast(context, 102, noIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val actionYes = NotificationCompat.Action.Builder(null, "Oui, c'est fait ✅", yesPending).build()
+        val actionNo  = NotificationCompat.Action.Builder(null, "Pas encore ⏳", noPending).build()
+
         val messages = listOf(
-            "Votre défi du jour : $randomNumber. Mémorisez-le bien !",
-            "C'est l'heure ! Gravez ce nombre dans votre mémoire : $randomNumber",
-            "Nouvelle journée, nouveau défi : $randomNumber 🧠",
-            "Gardez ce nombre en tête jusqu'à ce soir : $randomNumber"
+            "Votre défi : $randomNumber. Prêt ?",
+            "Mémorisez bien ce nombre : $randomNumber",
+            "Nouveau défi : $randomNumber 🧠",
+            "Gardez $randomNumber en tête !"
         )
-        showNotification(
+
+        showNotificationWithActions(
             context,
             MemoryApp.MORNING_NOTIFICATION_ID,
-            "Nombre du jour 🧠",
-            messages.random()
+            "As-tu mémorisé ? 🤔",
+            messages.random(),
+            listOf(actionYes, actionNo)
         )
     }
 
@@ -167,7 +182,7 @@ class NotificationReceiver : BroadcastReceiver() {
     }
 
     private fun showNotification(context: Context, id: Int, title: String, text: String) {
-        showNotificationWithAction(context, id, title, text, null)
+        showNotificationWithActions(context, id, title, text, emptyList())
     }
 
     private fun showNotificationWithAction(
@@ -177,19 +192,29 @@ class NotificationReceiver : BroadcastReceiver() {
         text: String,
         action: NotificationCompat.Action?
     ) {
+        showNotificationWithActions(context, id, title, text, listOfNotNull(action))
+    }
+
+    private fun showNotificationWithActions(
+        context: Context,
+        id: Int,
+        title: String,
+        text: String,
+        actions: List<NotificationCompat.Action>
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     context, Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                Log.e("MemoryApp", "ERREUR : Permission POST_NOTIFICATIONS non accordée !")
                 return
             }
         }
 
-        // Ajout de l'intention pour ouvrir l'app au clic sur la notification
         val mainIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            // On peut passer un flag pour indiquer qu'on veut révéler le nombre
+            putExtra("REVEAL_NUMBER", true)
         }
         val mainPendingIntent = PendingIntent.getActivity(
             context, 0, mainIntent,
@@ -202,18 +227,11 @@ class NotificationReceiver : BroadcastReceiver() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setContentIntent(mainPendingIntent) // Ouvre l'app ici
             .setAutoCancel(true)
+            .setContentIntent(mainPendingIntent)
 
-        action?.let { builder.addAction(it) }
+        actions.forEach { builder.addAction(it) }
 
-        try {
-            NotificationManagerCompat.from(context).notify(id, builder.build())
-            Log.d("MemoryApp", "Notification envoyée : $title")
-        } catch (e: Exception) {
-            Log.e("MemoryApp", "Erreur lors de l'envoi : ${e.message}")
-        }
+        NotificationManagerCompat.from(context).notify(id, builder.build())
     }
 }

@@ -8,16 +8,27 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -26,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.moulis.mamemoire.models.GameEntry
 import com.moulis.mamemoire.repositories.GameRepository
 import java.util.Calendar
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
 
@@ -36,9 +48,12 @@ class MainActivity : ComponentActivity() {
         (application as MemoryApp).scheduleNotifications()
         requestNotificationPermission()
 
+        val shouldReveal = intent?.getBooleanExtra("REVEAL_NUMBER", false) ?: false
+        val forceEvening = intent?.getBooleanExtra("FORCE_EVENING", false) ?: false
+
         setContent {
             MaterialTheme {
-                MemoryAppUI()
+                MemoryAppUI(autoReveal = shouldReveal, forceEvening = forceEvening)
             }
         }
     }
@@ -69,11 +84,14 @@ private fun isEveningTime(): Boolean {
 // ─── UI principale ────────────────────────────────────────────────────────────
 
 @Composable
-fun MemoryAppUI() {
+fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
     val context = LocalContext.current
 
     // Onglet actif : 0 = Accueil, 1 = Historique
     var selectedTab by remember { mutableIntStateOf(0) }
+    
+    // État pour la révélation forcée via notification
+    val initialReveal = remember { autoReveal }
 
     // Recharge l'état à chaque recomposition
     var history by remember { mutableStateOf(GameRepository.getHistory(context)) }
@@ -82,7 +100,7 @@ fun MemoryAppUI() {
 
     val hasMorningNumber = GameRepository.todayHasMorningNumber(context)
     val alreadyAnswered  = GameRepository.todayAlreadyAnswered(context)
-    val isEvening        = isEveningTime()
+    val isEvening        = forceEvening || isEveningTime()
 
     // Champ dispo uniquement le soir + nombre reçu + pas encore répondu
     val fieldEnabled = isEvening && hasMorningNumber && !alreadyAnswered
@@ -117,6 +135,7 @@ fun MemoryAppUI() {
                 fieldEnabled     = fieldEnabled,
                 answerInput      = answerInput,
                 feedbackMessage  = feedbackMessage,
+                initialReveal    = initialReveal,
                 onAnswerChange   = { answerInput = it },
                 onSubmit         = {
                     val number = answerInput.toIntOrNull()
@@ -155,6 +174,7 @@ fun HomeScreen(
     fieldEnabled: Boolean,
     answerInput: String,
     feedbackMessage: String?,
+    initialReveal: Boolean = false,
     onAnswerChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
@@ -175,7 +195,18 @@ fun HomeScreen(
         )
 
         // ── Statut du jour ──
-        StatusCard(hasMorningNumber, alreadyAnswered, isEvening)
+        val context = LocalContext.current
+        val isAlreadyRevealed = remember { GameRepository.isRevealed(context) }
+
+        if (hasMorningNumber && !alreadyAnswered && !isAlreadyRevealed) {
+            val morningNumber = GameRepository.getMorningNumber(context)
+            RevealableNumberCard(
+                number = morningNumber,
+                initiallyRevealed = initialReveal
+            )
+        } else {
+            StatusCard(hasMorningNumber, alreadyAnswered, isEvening)
+        }
 
         // ── Champ de réponse ──
         Text(
@@ -232,6 +263,100 @@ fun HomeScreen(
 }
 
 // ─── Carte de statut ──────────────────────────────────────────────────────────
+
+@Composable
+fun RevealableNumberCard(number: Int, initiallyRevealed: Boolean = false) {
+    val context = LocalContext.current
+    var revealed by remember { mutableStateOf(initiallyRevealed) }
+    
+    LaunchedEffect(revealed) {
+        if (revealed) {
+            GameRepository.setRevealed(context)
+        }
+    }
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = tween(durationMillis = 1500, easing = LinearOutSlowInEasing),
+        label = "RevealProgress"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (!revealed) Modifier.clickable { revealed = true } else Modifier),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .height(60.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!revealed && animatedProgress == 0f) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("✨ ", fontSize = 20.sp)
+                    Text(
+                        "Révéler le numéro du jour",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else {
+                Text(
+                    text = number.toString().padStart(4, '0'),
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 6.sp,
+                    modifier = Modifier.blur(if (revealed) 0.dp else 10.dp)
+                )
+
+                if (animatedProgress < 1f) {
+                    GrainDissolveOverlay(progress = animatedProgress)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GrainDissolveOverlay(progress: Float) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val particles = remember {
+        List(250) {
+            Offset(Random.nextFloat(), Random.nextFloat())
+        }
+    }
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val sandColor = Color.Gray.copy(alpha = (1f - progress).coerceIn(0f, 1f))
+        val radiusPx = with(density) { 1.5.dp.toPx() }
+        
+        particles.forEach { dot ->
+            if (Random.nextFloat() > progress) {
+                val noiseX = (Random.nextFloat() - 0.5f) * progress * 60f
+                val noiseY = (Random.nextFloat() - 0.5f) * progress * 60f
+                
+                val x = dot.x * w + noiseX
+                val y = dot.y * h + (progress * h * 0.3f) + noiseY
+                
+                drawCircle(
+                    color = sandColor,
+                    radius = radiusPx,
+                    center = Offset(x, y)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun StatusCard(hasMorningNumber: Boolean, alreadyAnswered: Boolean, isEvening: Boolean) {
