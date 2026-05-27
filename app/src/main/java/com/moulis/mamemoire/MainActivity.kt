@@ -11,21 +11,20 @@ import androidx.core.content.ContextCompat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -41,7 +40,7 @@ import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
 
-    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 1
+    private val notificationPermissionRequestCode = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 ActivityCompat.requestPermissions(
                     this,
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                    notificationPermissionRequestCode
                 )
             }
         }
@@ -87,7 +86,7 @@ private fun isEveningTime(): Boolean {
 fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
     val context = LocalContext.current
 
-    // Onglet actif : 0 = Accueil, 1 = Historique
+    // Onglet actif : 0 = Accueil, 1 = Historique, 2 = Paramètres
     var selectedTab by remember { mutableIntStateOf(0) }
     
     // État pour la révélation forcée via notification
@@ -97,17 +96,18 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
     var history by remember { mutableStateOf(GameRepository.getHistory(context)) }
     var answerInput by remember { mutableStateOf("") }
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
+    val digitsCount = GameRepository.getDigitsCount(context)
 
     val todayEntry = history.find { 
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val today = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date())
         it.date == today && it.playerAnswer != null 
     }
-    val hasMorningNumber = GameRepository.todayHasMorningNumber(context)
+    val hasNumber = GameRepository.todayHasMorningNumber(context)
     val alreadyAnswered  = todayEntry != null
     val isEvening        = forceEvening || isEveningTime()
 
     // Champ dispo uniquement le soir + nombre reçu + pas encore répondu
-    val fieldEnabled = isEvening && hasMorningNumber && !alreadyAnswered
+    val fieldEnabled = isEvening && hasNumber && !alreadyAnswered
 
     Scaffold(
         bottomBar = {
@@ -127,32 +127,39 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
                     icon      = { Text("📋") },
                     label     = { Text("Historique") }
                 )
+                NavigationBarItem(
+                    selected  = selectedTab == 2,
+                    onClick   = { selectedTab = 2 },
+                    icon      = { Text("⚙️") },
+                    label     = { Text("Paramètres") }
+                )
             }
         }
     ) { padding ->
         when (selectedTab) {
             0 -> HomeScreen(
                 modifier        = Modifier.padding(padding),
-                hasMorningNumber = hasMorningNumber,
+                hasNumber       = hasNumber,
                 todayEntry      = todayEntry,
-                isEvening        = isEvening,
-                fieldEnabled     = fieldEnabled,
-                answerInput      = answerInput,
-                feedbackMessage  = feedbackMessage,
-                initialReveal    = initialReveal,
-                onAnswerChange   = { answerInput = it },
-                onSubmit         = {
-                    val number = answerInput.toIntOrNull()
-                    if (number == null || answerInput.length != 4) {
-                        feedbackMessage = "⚠️ Entrez exactement 4 chiffres."
+                isEvening       = isEvening,
+                fieldEnabled    = fieldEnabled,
+                answerInput     = answerInput,
+                feedbackMessage = feedbackMessage,
+                initialReveal   = initialReveal,
+                digitsCount     = digitsCount,
+                onAnswerChange  = { answerInput = it },
+                onSubmit        = {
+                    val playerAnswer = answerInput.toIntOrNull()
+                    if (playerAnswer == null || answerInput.length != digitsCount) {
+                        feedbackMessage = "⚠️ Entrez exactement $digitsCount chiffres."
                     } else {
-                        GameRepository.saveAnswer(context, number)
-                        val morningNumber = GameRepository.getMorningNumber(context)
-                        val score  = GameRepository.calculateScore(morningNumber, number)
-                        val ratio  = (score * 100) / 4
-                        val isWon  = score == 4
+                        GameRepository.saveAnswer(context, playerAnswer)
+                        val number = GameRepository.getMorningNumber(context)
+                        val score  = GameRepository.calculateScore(number, playerAnswer, digitsCount)
+                        val ratio  = (score * 100) / digitsCount
+                        val isWon  = score == digitsCount
                         feedbackMessage = NotificationReceiver().buildResultMessage(
-                            morningNumber, number, score, ratio, isWon
+                            number, playerAnswer, score, ratio, isWon, digitsCount
                         )
                         history = GameRepository.getHistory(context)
                         answerInput = ""
@@ -163,6 +170,9 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
                 modifier = Modifier.padding(padding),
                 history  = history
             )
+            2 -> SettingsScreen(
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }
@@ -172,19 +182,22 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
 @Composable
 fun HomeScreen(
     modifier: Modifier,
-    hasMorningNumber: Boolean,
+    hasNumber: Boolean,
     todayEntry: GameEntry?,
     isEvening: Boolean,
     fieldEnabled: Boolean,
     answerInput: String,
     feedbackMessage: String?,
     initialReveal: Boolean = false,
+    digitsCount: Int,
     onAnswerChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
+    val scrollState = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -203,14 +216,15 @@ fun HomeScreen(
         val isAlreadyRevealed = remember { GameRepository.isRevealed(context) }
         val alreadyAnswered = todayEntry != null
 
-        if (hasMorningNumber && !alreadyAnswered && !isAlreadyRevealed) {
+        if (hasNumber && !alreadyAnswered && !isAlreadyRevealed) {
             val morningNumber = GameRepository.getMorningNumber(context)
             RevealableNumberCard(
                 number = morningNumber,
-                initiallyRevealed = initialReveal
+                initiallyRevealed = initialReveal,
+                total = digitsCount
             )
         } else {
-            StatusCard(hasMorningNumber, todayEntry, isEvening)
+            StatusCard(hasNumber, todayEntry, isEvening)
         }
 
         // ── Champ de réponse ──
@@ -222,13 +236,13 @@ fun HomeScreen(
 
         OutlinedTextField(
             value         = answerInput,
-            onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) onAnswerChange(it) },
+            onValueChange = { if (it.length <= digitsCount && it.all(Char::isDigit)) onAnswerChange(it) },
             label         = {
                 Text(
-                    if (!hasMorningNumber) "Aucun nombre reçu ce matin"
+                    if (!hasNumber) "Aucun nombre reçu ce matin"
                     else if (!isEvening)   "Disponible à partir de ${MemoryApp.EVENING_HOUR}h"
                     else if (alreadyAnswered) "Déjà répondu aujourd'hui ✓"
-                    else "Entrez le nombre mémorisé"
+                    else "Entrez les $digitsCount chiffres"
                 )
             },
             enabled              = fieldEnabled,
@@ -239,7 +253,7 @@ fun HomeScreen(
 
         Button(
             onClick  = onSubmit,
-            enabled  = fieldEnabled && answerInput.length == 4,
+            enabled  = fieldEnabled && answerInput.length == digitsCount,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Valider ma réponse")
@@ -267,10 +281,74 @@ fun HomeScreen(
     }
 }
 
+// ─── Écran Paramètres ─────────────────────────────────────────────────────────
+
+@Composable
+fun SettingsScreen(modifier: Modifier) {
+    val context = LocalContext.current
+    var digitsCount by remember { mutableFloatStateOf(GameRepository.getDigitsCount(context).toFloat()) }
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text       = "Paramètres",
+            fontSize   = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier   = Modifier.padding(bottom = 8.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Nombre de chiffres : ${digitsCount.toInt()}",
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Slider(
+                    value = digitsCount,
+                    onValueChange = { 
+                        digitsCount = it
+                        GameRepository.saveDigitsCount(context, it.toInt())
+                    },
+                    valueRange = 2f..8f,
+                    steps = 5
+                )
+                Text(
+                    text = "Ce paramètre s'appliquera au prochain défi généré.",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+        
+        Text(
+            text = "Version 1.1.0",
+            fontSize = 12.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 24.dp)
+        )
+    }
+}
+
 // ─── Carte de statut ──────────────────────────────────────────────────────────
 
 @Composable
-fun RevealableNumberCard(number: Int, initiallyRevealed: Boolean = false) {
+fun RevealableNumberCard(number: Int, initiallyRevealed: Boolean = false, total: Int) {
     val context = LocalContext.current
     var revealed by remember { mutableStateOf(initiallyRevealed) }
     
@@ -314,11 +392,11 @@ fun RevealableNumberCard(number: Int, initiallyRevealed: Boolean = false) {
                 }
             } else {
                 Text(
-                    text = number.toString().padStart(4, '0'),
-                    fontSize = 32.sp,
+                    text = number.toString().padStart(total, '0'),
+                    fontSize = if (total > 6) 24.sp else 32.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = FontFamily.Monospace,
-                    letterSpacing = 6.sp,
+                    letterSpacing = if (total > 6) 4.sp else 6.sp,
                     modifier = Modifier.blur(if (revealed) 0.dp else 10.dp)
                 )
 
@@ -368,16 +446,16 @@ fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boo
     val (emoji, text, bgColor) = when {
         todayEntry != null -> {
             val score = todayEntry.score
-            val msg = when (score) {
-                4    -> "Parfait ! 4/4 chiffres trouvés 🏆"
-                3    -> "Bien joué ! 3/4 chiffres trouvés 🥈"
-                2    -> "Pas mal ! 2/4 chiffres trouvés 🥉"
-                1    -> "Un peu juste... 1/4 chiffre trouvé 🧱"
-                else -> "Échec total ! 0/4 chiffre trouvé 😅"
+            val total = todayEntry.total
+            val msg = when {
+                score == total -> "Parfait ! $score/$total chiffres trouvés 🏆"
+                score >= total / 2 -> "Bien joué ! $score/$total chiffres trouvés 🥈"
+                score > 0 -> "Un peu juste... $score/$total chiffre(s) trouvé(s) 🧱"
+                else -> "Échec ! 0/$total chiffre trouvé 😅"
             }
             val color = when {
-                score == 4 -> Color(0xFF4CAF50) // Vert
-                score >= 2 -> Color(0xFFFF9800) // Orange
+                score == total -> Color(0xFF4CAF50) // Vert
+                score >= total / 2 -> Color(0xFFFF9800) // Orange
                 else       -> Color(0xFFF44336) // Rouge
             }
             Triple("✅", "Défi complété : $msg", color.copy(alpha = 0.12f))
@@ -430,7 +508,7 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
             val answered = history.filter { it.playerAnswer != null }
             if (answered.isNotEmpty()) {
                 val avgRatio = answered.map { it.ratioPercent }.average().toInt()
-                val wins     = answered.count { it.isWon }
+                val wins     = answered.count { it.ratioPercent == 100 }
 
                 Card(
                     modifier = Modifier
@@ -476,7 +554,7 @@ fun StatItem(label: String, value: String) {
 fun HistoryCard(entry: GameEntry) {
     val bgColor = when {
         entry.playerAnswer == null -> Color(0xFF9E9E9E).copy(alpha = 0.08f)
-        entry.isWon                -> Color(0xFF4CAF50).copy(alpha = 0.10f)
+        entry.ratioPercent == 100  -> Color(0xFF4CAF50).copy(alpha = 0.10f)
         entry.ratioPercent >= 50   -> Color(0xFFFF9800).copy(alpha = 0.10f)
         else                       -> Color(0xFFF44336).copy(alpha = 0.10f)
     }
@@ -495,12 +573,12 @@ fun HistoryCard(entry: GameEntry) {
             Column {
                 Text(text = entry.date, fontSize = 12.sp, color = Color.Gray)
                 Text(
-                    text       = "Nombre : ${entry.morningNumber}",
+                    text       = "Nombre : ${entry.morningNumber.toString().padStart(entry.total, '0')}",
                     fontWeight = FontWeight.Medium
                 )
                 if (entry.playerAnswer != null) {
                     Text(
-                        text  = "Réponse : ${entry.playerAnswer}",
+                        text  = "Réponse : ${entry.playerAnswer.toString().padStart(entry.total, '0')}",
                         fontSize = 13.sp,
                         color = Color.Gray
                     )
@@ -512,7 +590,7 @@ fun HistoryCard(entry: GameEntry) {
             if (entry.playerAnswer != null) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text       = "${entry.score}/4",
+                        text       = "${entry.score}/${entry.total}",
                         fontWeight = FontWeight.Bold,
                         fontSize   = 20.sp
                     )
@@ -520,9 +598,9 @@ fun HistoryCard(entry: GameEntry) {
                         text     = "${entry.ratioPercent}%",
                         fontSize = 13.sp,
                         color    = when {
-                            entry.isWon              -> Color(0xFF4CAF50)
-                            entry.ratioPercent >= 50 -> Color(0xFFFF9800)
-                            else                     -> Color(0xFFF44336)
+                            entry.ratioPercent == 100 -> Color(0xFF4CAF50)
+                            entry.ratioPercent >= 50  -> Color(0xFFFF9800)
+                            else                      -> Color(0xFFF44336)
                         }
                     )
                 }

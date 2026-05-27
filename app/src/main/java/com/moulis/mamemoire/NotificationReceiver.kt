@@ -54,7 +54,10 @@ class NotificationReceiver : BroadcastReceiver() {
     // ─── Matin ────────────────────────────────────────────────────────────────
 
     private fun sendMorningNotification(context: Context) {
-        val randomNumber = (1000..9999).random()
+        val total = GameRepository.getDigitsCount(context)
+        val min = Math.pow(10.0, (total - 1).toDouble()).toInt()
+        val max = Math.pow(10.0, total.toDouble()).toInt() - 1
+        val randomNumber = (min..max).random()
         GameRepository.saveMorningNumber(context, randomNumber)
         Log.d("MemoryApp", "Nombre généré : $randomNumber")
 
@@ -137,12 +140,13 @@ class NotificationReceiver : BroadcastReceiver() {
         val replyText = bundle.getCharSequence(KEY_REPLY_TEXT)?.toString()?.trim() ?: return
 
         val playerAnswer = replyText.toIntOrNull()
-        if (playerAnswer == null) {
+        val total = GameRepository.getDigitsCount(context)
+        if (playerAnswer == null || replyText.length != total) {
             showNotification(
                 context,
                 MemoryApp.EVENING_NOTIFICATION_ID,
                 "Réponse invalide ❌",
-                "Merci d'entrer uniquement un nombre à 4 chiffres."
+                "Merci d'entrer uniquement un nombre à $total chiffres."
             )
             return
         }
@@ -150,11 +154,11 @@ class NotificationReceiver : BroadcastReceiver() {
         GameRepository.saveAnswer(context, playerAnswer)
 
         val morningNumber = GameRepository.getMorningNumber(context)
-        val score         = GameRepository.calculateScore(morningNumber, playerAnswer)
-        val ratio         = (score * 100) / 4
-        val isWon         = score == 4
+        val score         = GameRepository.calculateScore(morningNumber, playerAnswer, total)
+        val ratio         = (score * 100) / total
+        val isWon         = score == total
 
-        val resultMessage = buildResultMessage(morningNumber, playerAnswer, score, ratio, isWon)
+        val resultMessage = buildResultMessage(morningNumber, playerAnswer, score, ratio, isWon, total)
 
         showNotification(
             context,
@@ -162,7 +166,7 @@ class NotificationReceiver : BroadcastReceiver() {
             if (isWon) "Bravo ! 🎉" else "Résultat du jour",
             resultMessage
         )
-        Log.d("MemoryApp", "Réponse enregistrée : $playerAnswer | Score: $score/4 | Ratio: $ratio%")
+        Log.d("MemoryApp", "Réponse enregistrée : $playerAnswer | Score: $score/$total | Ratio: $ratio%")
     }
 
     // ─── Utilitaires ──────────────────────────────────────────────────────────
@@ -172,12 +176,15 @@ class NotificationReceiver : BroadcastReceiver() {
         playerAnswer: Int,
         score: Int,
         ratio: Int,
-        isWon: Boolean
+        isWon: Boolean,
+        total: Int
     ): String {
+        val morningStr = morningNumber.toString().padStart(total, '0')
+        val answerStr = playerAnswer.toString().padStart(total, '0')
         return if (isWon) {
-            "Parfait ! Le nombre était bien $morningNumber. 100% de réussite 🏆"
+            "Parfait ! Le nombre était bien $morningStr. 100% de réussite 🏆"
         } else {
-            "Le nombre était $morningNumber, vous avez répondu $playerAnswer. $score/4 chiffres corrects ($ratio%)"
+            "Le nombre était $morningStr, vous avez répondu $answerStr. $score/$total chiffres corrects ($ratio%)"
         }
     }
 

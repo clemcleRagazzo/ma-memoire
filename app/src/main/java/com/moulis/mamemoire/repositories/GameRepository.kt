@@ -15,8 +15,9 @@ object GameRepository {
     private const val KEY_MORNING_NUMBER = "morning_number"
     private const val KEY_MORNING_DATE = "morning_date"
     private const val KEY_REVEALED_DATE = "revealed_date"
+    private const val KEY_DIGITS_COUNT = "digits_count"
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     // ─── Nombre du matin ──────────────────────────────────────────────────────
 
@@ -66,11 +67,24 @@ object GameRepository {
         }
     }
 
+    // ─── Paramètres ───────────────────────────────────────────────────────────
+
+    fun getDigitsCount(context: Context): Int {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(KEY_DIGITS_COUNT, 4)
+    }
+
+    fun saveDigitsCount(context: Context, count: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putInt(KEY_DIGITS_COUNT, count)
+        }
+    }
+
     // ─── Calcul du ratio ──────────────────────────────────────────────────────
 
-    fun calculateScore(morningNumber: Int, playerAnswer: Int): Int {
-        val expected = morningNumber.toString().padStart(4, '0')
-        val given    = playerAnswer.toString().padStart(4, '0')
+    fun calculateScore(morningNumber: Int, playerAnswer: Int, total: Int): Int {
+        val expected = morningNumber.toString().padStart(total, '0')
+        val given    = playerAnswer.toString().padStart(total, '0')
         return expected.zip(given).count { (e, g) -> e == g }
     }
 
@@ -83,15 +97,15 @@ object GameRepository {
         if (morningNumber == -1) return
 
         val today = dateFormat.format(Date())
-        val score = calculateScore(morningNumber, playerAnswer)
-        val isWon = score == 4
+        val total = getDigitsCount(context)
+        val score = calculateScore(morningNumber, playerAnswer, total)
 
         val entry = GameEntry(
             date          = today,
             morningNumber = morningNumber,
             playerAnswer  = playerAnswer,
             score         = score,
-            isWon         = isWon
+            total         = total
         )
 
         val history = getHistory(context).toMutableList()
@@ -116,8 +130,7 @@ object GameRepository {
                     morningNumber = obj.getInt("morningNumber"),
                     playerAnswer  = if (obj.isNull("playerAnswer")) null else obj.getInt("playerAnswer"),
                     score         = obj.getInt("score"),
-                    total         = obj.optInt("total", 4),
-                    isWon         = obj.getBoolean("isWon")
+                    total         = obj.optInt("total", 4)
                 )
             }
         } catch (e: Exception) {
@@ -134,7 +147,6 @@ object GameRepository {
                 if (entry.playerAnswer != null) put("playerAnswer", entry.playerAnswer) else put("playerAnswer", JSONObject.NULL)
                 put("score",         entry.score)
                 put("total",         entry.total)
-                put("isWon",         entry.isWon)
             }
             array.put(obj)
         }
