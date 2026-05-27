@@ -13,12 +13,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,12 +24,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.moulis.mamemoire.models.GameEntry
 import com.moulis.mamemoire.repositories.GameRepository
+import com.moulis.mamemoire.screens.HistoryScreen
+import com.moulis.mamemoire.screens.HomeScreen
+import com.moulis.mamemoire.screens.SettingsScreen
 import java.util.Calendar
 import kotlin.random.Random
 
@@ -177,173 +173,8 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
     }
 }
 
-// ─── Écran Défi ───────────────────────────────────────────────────────────────
-
-@Composable
-fun HomeScreen(
-    modifier: Modifier,
-    hasNumber: Boolean,
-    todayEntry: GameEntry?,
-    isEvening: Boolean,
-    fieldEnabled: Boolean,
-    answerInput: String,
-    feedbackMessage: String?,
-    initialReveal: Boolean = false,
-    digitsCount: Int,
-    onAnswerChange: (String) -> Unit,
-    onSubmit: () -> Unit
-) {
-    val scrollState = rememberScrollState()
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text       = "Entraînement\nde la mémoire",
-            fontSize   = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign  = TextAlign.Center
-        )
-
-        // ── Statut du jour ──
-        val context = LocalContext.current
-        val isAlreadyRevealed = remember { GameRepository.isRevealed(context) }
-        val alreadyAnswered = todayEntry != null
-
-        if (hasNumber && !alreadyAnswered && !isAlreadyRevealed) {
-            val morningNumber = GameRepository.getMorningNumber(context)
-            RevealableNumberCard(
-                number = morningNumber,
-                initiallyRevealed = initialReveal,
-                total = digitsCount
-            )
-        } else {
-            StatusCard(hasNumber, todayEntry, isEvening)
-        }
-
-        // ── Champ de réponse ──
-        Text(
-            text     = "Votre réponse :",
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.align(Alignment.Start)
-        )
-
-        OutlinedTextField(
-            value         = answerInput,
-            onValueChange = { if (it.length <= digitsCount && it.all(Char::isDigit)) onAnswerChange(it) },
-            label         = {
-                Text(
-                    if (!hasNumber) "Aucun nombre reçu ce matin"
-                    else if (!isEvening)   "Disponible à partir de ${MemoryApp.EVENING_HOUR}h"
-                    else if (alreadyAnswered) "Déjà répondu aujourd'hui ✓"
-                    else "Entrez les $digitsCount chiffres"
-                )
-            },
-            enabled              = fieldEnabled,
-            keyboardOptions      = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine           = true,
-            modifier             = Modifier.fillMaxWidth()
-        )
-
-        Button(
-            onClick  = onSubmit,
-            enabled  = fieldEnabled && answerInput.length == digitsCount,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Valider ma réponse")
-        }
-
-        // ── Feedback ──
-        feedbackMessage?.let { msg ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors   = CardDefaults.cardColors(
-                    containerColor = if (msg.contains("Parfait") || msg.contains("Bravo"))
-                        Color(0xFF4CAF50).copy(alpha = 0.15f)
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Text(
-                    text     = msg,
-                    modifier = Modifier.padding(16.dp),
-                    textAlign = TextAlign.Center,
-                    style    = MaterialTheme.typography.bodyLarge
-                )
-            }
-        }
-    }
-}
-
 // ─── Écran Paramètres ─────────────────────────────────────────────────────────
 
-@Composable
-fun SettingsScreen(modifier: Modifier) {
-    val context = LocalContext.current
-    var digitsCount by remember { mutableFloatStateOf(GameRepository.getDigitsCount(context).toFloat()) }
-    val scrollState = rememberScrollState()
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text       = "Paramètres",
-            fontSize   = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier   = Modifier.padding(bottom = 8.dp)
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Nombre de chiffres : ${digitsCount.toInt()}",
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Slider(
-                    value = digitsCount,
-                    onValueChange = { 
-                        digitsCount = it
-                        GameRepository.saveDigitsCount(context, it.toInt())
-                    },
-                    valueRange = 2f..8f,
-                    steps = 5
-                )
-                Text(
-                    text = "Ce paramètre s'appliquera au prochain défi généré.",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-        }
-        
-        Text(
-            text = "Version 1.1.0",
-            fontSize = 12.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 24.dp)
-        )
-    }
-}
 
 // ─── Carte de statut ──────────────────────────────────────────────────────────
 
@@ -478,67 +309,6 @@ fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boo
             Text(text = text, style = MaterialTheme.typography.bodyMedium)
         }
 
-    }
-}
-
-// ─── Écran Historique ─────────────────────────────────────────────────────────
-
-@Composable
-fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text       = "Historique",
-            fontSize   = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier   = Modifier.padding(bottom = 8.dp)
-        )
-
-        if (history.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Aucune partie enregistrée.", color = Color.Gray)
-            }
-        } else {
-            // Statistiques globales
-            val answered = history.filter { it.playerAnswer != null }
-            if (answered.isNotEmpty()) {
-                val avgRatio = answered.map { it.ratioPercent }.average().toInt()
-                val wins     = answered.count { it.ratioPercent == 100 }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        StatItem(label = "Parties", value = "${answered.size}")
-                        StatItem(label = "Victoires", value = "$wins 🏆")
-                        StatItem(label = "Ratio moyen", value = "$avgRatio%")
-                    }
-                }
-            }
-
-            // Liste
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(history) { entry ->
-                    HistoryCard(entry)
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-            }
-        }
     }
 }
 
