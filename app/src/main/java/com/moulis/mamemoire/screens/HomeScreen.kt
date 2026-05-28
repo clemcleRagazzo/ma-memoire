@@ -96,9 +96,10 @@ fun HomeScreen(
             value         = answerInput,
             onValueChange = { if (it.length <= digitsCount && it.all(Char::isDigit)) onAnswerChange(it) },
             label         = {
+                val eveningHour = GameRepository.getEveningHour(context)
                 Text(
                     if (!hasNumber) "Aucun nombre reçu ce matin"
-                    else if (!isEvening)   "Disponible à partir de ${MemoryApp.EVENING_HOUR}h"
+                    else if (!isEvening)   "Disponible à partir de ${eveningHour}h"
                     else if (alreadyAnswered) "Déjà répondu aujourd'hui ✓"
                     else "Entrez les $digitsCount chiffres"
                 )

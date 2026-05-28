@@ -1,6 +1,7 @@
 package com.moulis.mamemoire
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -70,10 +71,9 @@ class MainActivity : ComponentActivity() {
 
 // ─── Utilitaire heure ─────────────────────────────────────────────────────────
 
-/** true si on est entre 18h00 et 23h59 */
-private fun isEveningTime(): Boolean {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return hour >= MemoryApp.EVENING_HOUR
+private fun isEveningTime(context: Context): Boolean {
+    val hour = java.time.LocalTime.now().hour
+    return hour >= GameRepository.getEveningHour(context)
 }
 
 // ─── UI principale ────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
     }
     val hasNumber = GameRepository.todayHasMorningNumber(context)
     val alreadyAnswered  = todayEntry != null
-    val isEvening        = forceEvening || isEveningTime()
+    val isEvening        = forceEvening || isEveningTime(context)
 
     // Champ dispo uniquement le soir + nombre reçu + pas encore répondu
     val fieldEnabled = isEvening && hasNumber && !alreadyAnswered
@@ -274,6 +274,7 @@ fun GrainDissolveOverlay(progress: Float) {
 
 @Composable
 fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boolean) {
+    val context = LocalContext.current
     val (emoji, text, bgColor) = when {
         todayEntry != null -> {
             val score = todayEntry.score
@@ -292,8 +293,8 @@ fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boo
             Triple("✅", "Défi complété : $msg", color.copy(alpha = 0.12f))
         }
         isEvening && hasMorningNumber -> Triple("🎯", "C'est l'heure ! Entrez votre réponse ci-dessous.", Color(0xFFFF9800).copy(alpha = 0.12f))
-        hasMorningNumber -> Triple("⏳", "Nombre reçu ce matin. Revenez à ${MemoryApp.EVENING_HOUR}h pour répondre !", Color(0xFF2196F3).copy(alpha = 0.12f))
-        else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à ${MemoryApp.MORNING_HOUR}h demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
+        hasMorningNumber -> Triple("⏳", "Nombre reçu ce matin. Revenez à ${GameRepository.getEveningHour(context)}h pour répondre !", Color(0xFF2196F3).copy(alpha = 0.12f))
+        else -> Triple("😴", "Aucun nombre reçu aujourd'hui. La notification arrive à ${GameRepository.getMorningHour(context)}h demain !", Color(0xFF9E9E9E).copy(alpha = 0.12f))
     }
 
     Card(

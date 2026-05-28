@@ -16,6 +16,8 @@ object GameRepository {
     private const val KEY_MORNING_DATE = "morning_date"
     private const val KEY_REVEALED_DATE = "revealed_date"
     private const val KEY_DIGITS_COUNT = "digits_count"
+    private const val KEY_MORNING_HOUR = "morning_hour"
+    private const val KEY_EVENING_HOUR = "evening_hour"
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
@@ -77,6 +79,28 @@ object GameRepository {
     fun saveDigitsCount(context: Context, count: Int) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putInt(KEY_DIGITS_COUNT, count)
+        }
+    }
+
+    fun getMorningHour(context: Context): Int {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(KEY_MORNING_HOUR, 8)
+    }
+
+    fun saveMorningHour(context: Context, hour: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putInt(KEY_MORNING_HOUR, hour)
+        }
+    }
+
+    fun getEveningHour(context: Context): Int {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(KEY_EVENING_HOUR, 18)
+    }
+
+    fun saveEveningHour(context: Context, hour: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putInt(KEY_EVENING_HOUR, hour)
         }
     }
 

@@ -17,10 +17,6 @@ class MemoryApp : Application() {
         const val CHANNEL_ID = "memory_channel"
         const val MORNING_NOTIFICATION_ID = 1
         const val EVENING_NOTIFICATION_ID = 2
-        
-        // Heures configurables
-        const val MORNING_HOUR = 8
-        const val EVENING_HOUR = 18
 
         const val ACTION_MORNING = "MORNING_NOTIFICATION"
         const val ACTION_EVENING = "EVENING_NOTIFICATION"
@@ -36,9 +32,12 @@ class MemoryApp : Application() {
     fun scheduleNotifications() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
+        val morningHour = com.moulis.mamemoire.repositories.GameRepository.getMorningHour(this)
+        val eveningHour = com.moulis.mamemoire.repositories.GameRepository.getEveningHour(this)
+
         val notificationConfigs = listOf(
-            MORNING_HOUR to ACTION_MORNING,
-            EVENING_HOUR to ACTION_EVENING
+            morningHour to ACTION_MORNING,
+            eveningHour to ACTION_EVENING
         )
 
         notificationConfigs.forEach { (hour, actionName) ->
