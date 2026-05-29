@@ -32,6 +32,7 @@ import com.moulis.mamemoire.repositories.GameRepository
 import com.moulis.mamemoire.screens.HistoryScreen
 import com.moulis.mamemoire.screens.HomeScreen
 import com.moulis.mamemoire.screens.SettingsScreen
+import com.moulis.mamemoire.ui.theme.MaMemoireTheme
 import java.util.Calendar
 import kotlin.random.Random
 
@@ -48,7 +49,7 @@ class MainActivity : ComponentActivity() {
         val forceEvening = intent?.getBooleanExtra("FORCE_EVENING", false) ?: false
 
         setContent {
-            MaterialTheme {
+            MaMemoireTheme {
                 MemoryAppUI(autoReveal = shouldReveal, forceEvening = forceEvening)
             }
         }
@@ -280,10 +281,10 @@ fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boo
             val score = todayEntry.score
             val total = todayEntry.total
             val msg = when {
-                score == total -> "Parfait ! $score/$total chiffres trouvés 🏆"
-                score >= total / 2 -> "Bien joué ! $score/$total chiffres trouvés 🥈"
-                score > 0 -> "Un peu juste... $score/$total chiffre(s) trouvé(s) 🧱"
-                else -> "Échec ! 0/$total chiffre trouvé 😅"
+                score == total -> "Parfait ! \n $score/$total chiffres trouvés 🏆"
+                score >= total / 2 -> "Bien joué ! \n score/$total chiffres trouvés 🥈"
+                score > 0 -> "Un peu juste... \n $score/$total chiffre(s) trouvé(s) 🧱"
+                else -> "Échec ! \n 0/$total chiffre trouvé 😅"
             }
             val color = when {
                 score == total -> Color(0xFF4CAF50) // Vert

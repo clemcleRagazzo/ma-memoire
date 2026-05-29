@@ -140,7 +140,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val replyText = bundle.getCharSequence(KEY_REPLY_TEXT)?.toString()?.trim() ?: return
 
         val playerAnswer = replyText.toIntOrNull()
-        val total = GameRepository.getDigitsCount(context)
+        val total = GameRepository.getMorningNumber(context).toString().length
         if (playerAnswer == null || replyText.length != total) {
             showNotification(
                 context,

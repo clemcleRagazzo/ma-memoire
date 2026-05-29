@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,16 +34,20 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(46.dp))
 
         Text(
             text       = "Historique",
-            fontSize   = 24.sp,
+            fontSize   = 28.sp,
             fontWeight = FontWeight.Bold,
-            modifier   = Modifier.padding(bottom = 8.dp)
+            textAlign = TextAlign.Center
         )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         if (history.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

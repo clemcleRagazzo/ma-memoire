@@ -59,7 +59,7 @@ fun SettingsScreen(modifier: Modifier) {
     val difficultyText = when {
         duration > 12 -> "Difficulté : Extrême"
         duration > 10 -> "Difficulté : Difficile"
-        duration > 8 -> "Difficulté : Parfait"
+        duration > 8 -> "Difficulté : Attendu"
         duration > 6 -> "Difficulté : Moyen"
         duration > 4 -> "Difficulté : Facile"
         duration > 2 -> "Difficulté : Très facile"
@@ -117,7 +117,7 @@ fun SettingsScreen(modifier: Modifier) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaMemoireTheme.surfaceVariant
             )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
