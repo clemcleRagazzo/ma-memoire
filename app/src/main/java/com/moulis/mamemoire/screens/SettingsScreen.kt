@@ -117,7 +117,7 @@ fun SettingsScreen(modifier: Modifier) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaMemoireTheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {

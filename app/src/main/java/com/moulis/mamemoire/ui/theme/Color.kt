@@ -2,6 +2,9 @@ package com.moulis.mamemoire.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+val BrainPrimary  = Color(0xFFF995C7)
+val BrainPrimaryContainer = Color(0xFFFFD1E8)
+val BrainSurfaceVariant = Color(0xFFFCE4EC)
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
