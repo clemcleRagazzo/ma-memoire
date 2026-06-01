@@ -36,13 +36,23 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+enum class AppTheme {
+    LIGHT, DARK, SYSTEM
+}
+
 @Composable
 fun MaMemoireTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: AppTheme = AppTheme.SYSTEM,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        AppTheme.LIGHT -> false
+        AppTheme.DARK -> true
+        AppTheme.SYSTEM -> isSystemInDarkTheme()
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

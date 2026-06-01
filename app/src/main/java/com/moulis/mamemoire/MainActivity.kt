@@ -32,8 +32,8 @@ import com.moulis.mamemoire.repositories.GameRepository
 import com.moulis.mamemoire.screens.HistoryScreen
 import com.moulis.mamemoire.screens.HomeScreen
 import com.moulis.mamemoire.screens.SettingsScreen
+import com.moulis.mamemoire.ui.theme.AppTheme
 import com.moulis.mamemoire.ui.theme.MaMemoireTheme
-import java.util.Calendar
 import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
@@ -49,8 +49,15 @@ class MainActivity : ComponentActivity() {
         val forceEvening = intent?.getBooleanExtra("FORCE_EVENING", false) ?: false
 
         setContent {
-            MaMemoireTheme {
-                MemoryAppUI(autoReveal = shouldReveal, forceEvening = forceEvening)
+            var themeModeStr by remember { mutableStateOf(GameRepository.getThemeMode(this)) }
+            val themeMode = try { AppTheme.valueOf(themeModeStr) } catch (_: Exception) { AppTheme.SYSTEM }
+
+            MaMemoireTheme(themeMode = themeMode) {
+                MemoryAppUI(
+                    autoReveal = shouldReveal,
+                    forceEvening = forceEvening,
+                    onThemeChanged = { themeModeStr = it }
+                )
             }
         }
     }
@@ -80,7 +87,11 @@ private fun isEveningTime(context: Context): Boolean {
 // ─── UI principale ────────────────────────────────────────────────────────────
 
 @Composable
-fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
+fun MemoryAppUI(
+    autoReveal: Boolean = false,
+    forceEvening: Boolean = false,
+    onThemeChanged: (String) -> Unit = {}
+) {
     val context = LocalContext.current
 
     // Onglet actif : 0 = Accueil, 1 = Historique, 2 = Paramètres
@@ -168,7 +179,8 @@ fun MemoryAppUI(autoReveal: Boolean = false, forceEvening: Boolean = false) {
                 history  = history
             )
             2 -> SettingsScreen(
-                modifier = Modifier.padding(padding)
+                modifier = Modifier.padding(padding),
+                onThemeChanged = onThemeChanged
             )
         }
     }

@@ -11,13 +11,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,19 +37,32 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import com.moulis.mamemoire.ui.theme.MaMemoireTheme
 import com.moulis.mamemoire.repositories.GameRepository
-import com.moulis.mamemoire.models.GameEntry
 import android.app.TimePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.moulis.mamemoire.MemoryApp
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(modifier: Modifier) {
+fun SettingsScreen(
+    modifier: Modifier,
+    onThemeChanged: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     var digitsCount by remember { mutableFloatStateOf(GameRepository.getDigitsCount(context).toFloat()) }
     var morningHour by remember { mutableIntStateOf(GameRepository.getMorningHour(context)) }
     var eveningHour by remember { mutableIntStateOf(GameRepository.getEveningHour(context)) }
+    
+    var themeMode by remember { mutableStateOf(GameRepository.getThemeMode(context)) }
+    var expanded by remember { mutableStateOf(false) }
+    val themeOptions = listOf("LIGHT", "DARK", "SYSTEM")
+    val themeLabels = mapOf(
+        "SYSTEM" to "Système",
+        "LIGHT" to "Clair",
+        "DARK" to "Sombre"
+    )
 
     val scrollState = rememberScrollState()
 
@@ -197,6 +217,58 @@ fun SettingsScreen(modifier: Modifier) {
                     color = Color.Gray,
                     modifier = Modifier.padding(top = 8.dp)
                 )
+            }
+        }
+
+        // --- Theme Selection ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Thème de l'application",
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = themeLabels[themeMode] ?: "Système",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                            .fillMaxWidth()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        themeOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(themeLabels[option] ?: option) },
+                                onClick = {
+                                    themeMode = option
+                                    expanded = false
+                                    GameRepository.saveThemeMode(context, option)
+                                    onThemeChanged(option)
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
             }
         }
 

@@ -18,8 +18,22 @@ object GameRepository {
     private const val KEY_DIGITS_COUNT = "digits_count"
     private const val KEY_MORNING_HOUR = "morning_hour"
     private const val KEY_EVENING_HOUR = "evening_hour"
+    private const val KEY_THEME_MODE = "theme_mode"
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+    // ─── Theme ────────────────────────────────────────────────────────────────
+
+    fun getThemeMode(context: Context): String {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_THEME_MODE, "SYSTEM") ?: "SYSTEM"
+    }
+
+    fun saveThemeMode(context: Context, mode: String) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putString(KEY_THEME_MODE, mode)
+        }
+    }
 
     // ─── Nombre du matin ──────────────────────────────────────────────────────
 
