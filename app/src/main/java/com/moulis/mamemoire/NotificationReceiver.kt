@@ -64,25 +64,33 @@ class NotificationReceiver : BroadcastReceiver() {
         val yesIntent = Intent(context, NotificationReceiver::class.java).apply { action = ACTION_YES }
         val noIntent  = Intent(context, NotificationReceiver::class.java).apply { action = ACTION_NO }
 
-        val yesPending = PendingIntent.getBroadcast(context, 101, yesIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val noPending  = PendingIntent.getBroadcast(context, 102, noIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+//        val yesPending = PendingIntent.getBroadcast(context, 101, yesIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+//        val noPending  = PendingIntent.getBroadcast(context, 102, noIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        val actionYes = NotificationCompat.Action.Builder(null, "Oui, c'est fait ✅", yesPending).build()
-        val actionNo  = NotificationCompat.Action.Builder(null, "Pas encore ⏳", noPending).build()
+//        val actionYes = NotificationCompat.Action.Builder(null, "Oui, c'est fait ✅", yesPending).build()
+//        val actionNo  = NotificationCompat.Action.Builder(null, "Pas encore ⏳", noPending).build()
+
+//        val messages = listOf(
+//            "Votre défi : $randomNumber. Prêt ?",
+//            "Mémorisez bien ce nombre : $randomNumber",
+//            "Nouveau défi : $randomNumber 🧠",
+//            "Gardez $randomNumber en tête !"
+//        )
 
         val messages = listOf(
-            "Votre défi : $randomNumber. Prêt ?",
-            "Mémorisez bien ce nombre : $randomNumber",
-            "Nouveau défi : $randomNumber 🧠",
-            "Gardez $randomNumber en tête !"
+            "N'oublies pas de consulter ton numéro !",
+            "Ton numéro du jour est prêt 😁",
+            "Prêt pour ton défi quotidien ? 🧐",
+            "Ton numéro n'attend plus que toi !"
         )
 
-        showNotificationWithActions(
+//        showNotificationWithActions(
+        showNotification(
             context,
             MemoryApp.MORNING_NOTIFICATION_ID,
-            "As-tu mémorisé ? 🤔",
+            "Ma mémoire 🧠",
             messages.random(),
-            listOf(actionYes, actionNo)
+//            listOf(actionYes, actionNo)
         )
     }
 
@@ -99,37 +107,37 @@ class NotificationReceiver : BroadcastReceiver() {
 
         val messages = listOf(
             "Alors, quel était le nombre de ce matin ? 🤔",
-            "C'est l'heure du test ! Vous souvenez-vous ?",
-            "La journée se termine. Quel était le nombre ?"
+            "C'est l'heure du test ! Te rappelles-tu ? 🧐",
+            "La journée se termine. Quel était le nombre ? 😁"
         )
 
         // Intent pour la réponse inline
-        val replyIntent = Intent(context, NotificationReceiver::class.java).apply {
-            action = ACTION_REPLY
-        }
-        val replyPendingIntent = PendingIntent.getBroadcast(
-            context,
-            99,
-            replyIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-        )
+//        val replyIntent = Intent(context, NotificationReceiver::class.java).apply {
+//            action = ACTION_REPLY
+//        }
+//        val replyPendingIntent = PendingIntent.getBroadcast(
+//            context,
+//            99,
+//            replyIntent,
+//            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+//        )
 
-        val remoteInput = RemoteInputCompat.Builder(KEY_REPLY_TEXT)
-            .setLabel("Votre réponse...")
-            .build()
+//        val remoteInput = RemoteInputCompat.Builder(KEY_REPLY_TEXT)
+//            .setLabel("Votre réponse...")
+//            .build()
 
-        val replyAction = NotificationCompat.Action.Builder(
-            android.R.drawable.ic_menu_send,
-            "Répondre",
-            replyPendingIntent
-        ).addRemoteInput(remoteInput).build()
+//        val replyAction = NotificationCompat.Action.Builder(
+//            android.R.drawable.ic_menu_send,
+//            "Répondre",
+//            replyPendingIntent
+//        ).addRemoteInput(remoteInput).build()
 
-        showNotificationWithAction(
+        showNotification(
             context,
             MemoryApp.EVENING_NOTIFICATION_ID,
-            "Souvenez-vous 🧐",
-            messages.random(),
-            replyAction
+            "Ma mémoire",
+            messages.random()
+//            replyAction
         )
     }
 

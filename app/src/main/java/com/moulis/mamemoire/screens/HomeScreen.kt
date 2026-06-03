@@ -73,9 +73,9 @@ fun HomeScreen(
 
         // ── Statut du jour ──
         val alreadyAnswered = todayEntry != null
+        val morningNumber = GameRepository.getMorningNumber(context)
 
         if (hasNumber && !alreadyAnswered && !revealed) {
-            val morningNumber = GameRepository.getMorningNumber(context)
             RevealableNumberCard(
                 number = morningNumber,
                 initiallyRevealed = initialReveal,
@@ -100,7 +100,7 @@ fun HomeScreen(
                 Text(
                     if (!hasNumber) "Aucun nombre reçu ce matin"
                     else if (!isEvening)   "Disponible à partir de ${eveningHour}h"
-                    else if (alreadyAnswered) "Déjà répondu aujourd'hui ✓"
+                    else if (alreadyAnswered) "Déjà répondu : $morningNumber"
                     else "Entrez les $digitsCount chiffres"
                 )
             },

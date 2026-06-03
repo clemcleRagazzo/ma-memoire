@@ -14,3 +14,6 @@
 Pas besoin de changer l'heure du téléphone (évite les erreurs de permission) ! Utilise cette commande pour forcer l'interface du soir :
 ```.\adb shell am start -n com.moulis.mamemoire/.MainActivity --ez FORCE_EVENING true```
 *(Relancer l'app normalement pour revenir au mode automatique basé sur l'heure réelle).*
+
+# MDP keystore
+aaaaaaaa

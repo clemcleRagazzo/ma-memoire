@@ -294,7 +294,7 @@ fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boo
             val total = todayEntry.total
             val msg = when {
                 score == total -> "Parfait ! \n $score/$total chiffres trouvés 🏆"
-                score >= total / 2 -> "Bien joué ! \n score/$total chiffres trouvés 🥈"
+                score >= total / 2 -> "Bien joué ! \n $score/$total chiffres trouvés 🥈"
                 score > 0 -> "Un peu juste... \n $score/$total chiffre(s) trouvé(s) 🧱"
                 else -> "Échec ! \n 0/$total chiffre trouvé 😅"
             }
