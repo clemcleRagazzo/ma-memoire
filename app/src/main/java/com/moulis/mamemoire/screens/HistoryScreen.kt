@@ -96,11 +96,10 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
 @Composable
 fun HistoryScreenPreview() {
     val sampleHistory = listOf(
-        GameEntry("2023-10-27", 1234, 1234, 4, 4),
-        GameEntry("2023-10-26", 5678, 5670, 3, 4),
-        GameEntry("2023-10-25", 9012, 1234, 0, 4),
-        GameEntry("2023-10-24", 3456, 3456, 4, 4)
-    )
+        GameEntry("30/06/2026", 12345678, 12345678, 8, 8),
+        GameEntry("31/06/2026", 123482, 123000, 3, 6),
+        GameEntry("01/07/2026", 9012, 1111, 0, 4)
+         )
     MaMemoireTheme {
         HistoryScreen(modifier = Modifier, history = sampleHistory)
     }

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.moulis.mamemoire.models.GameEntry
 import com.moulis.mamemoire.repositories.GameRepository
 import com.moulis.mamemoire.screens.HistoryScreen
@@ -74,6 +75,14 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MemoryAppUIPreview() {
+    MaMemoireTheme {
+        MemoryAppUI()
     }
 }
 

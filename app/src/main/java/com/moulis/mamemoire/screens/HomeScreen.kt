@@ -140,82 +140,82 @@ fun HomeScreen(
     }
 }
 
-//@Preview(showBackground = true, name = "7h - Pas de numéro")
-//@Composable
-//fun PreviewHome7h() {
-//    MaMemoireTheme {
-//        HomeScreen(
-//            modifier = Modifier,
-//            hasNumber = false,
-//            todayEntry = null,
-//            isEvening = false,
-//            fieldEnabled = false,
-//            answerInput = "",
-//            feedbackMessage = null,
-//            digitsCount = 4,
-//            onAnswerChange = {},
-//            onSubmit = {}
-//        )
-//    }
-//}
-//
-//@Preview(showBackground = true, name = "8h - Numéro à découvrir")
-//@Composable
-//fun PreviewHome8h() {
-//    MaMemoireTheme {
-//        HomeScreen(
-//            modifier = Modifier,
-//            hasNumber = true,
-//            todayEntry = null,
-//            isEvening = false,
-//            fieldEnabled = false,
-//            answerInput = "",
-//            feedbackMessage = null,
-//            initialReveal = false,
-//            isAlreadyRevealed = false,
-//            digitsCount = 4,
-//            onAnswerChange = {},
-//            onSubmit = {}
-//        )
-//    }
-//}
-//
-//@Preview(showBackground = true, name = "9h - Numéro découvert")
-//@Composable
-//fun PreviewHome9h() {
-//    MaMemoireTheme {
-//        HomeScreen(
-//            modifier = Modifier,
-//            hasNumber = true,
-//            todayEntry = null,
-//            isEvening = false,
-//            fieldEnabled = false,
-//            answerInput = "",
-//            feedbackMessage = null,
-//            initialReveal = true,
-//            isAlreadyRevealed = false,
-//            digitsCount = 4,
-//            onAnswerChange = {},
-//            onSubmit = {}
-//        )
-//    }
-//}
-//
-//@Preview(showBackground = true, name = "18h - Défi réussi 50%")
-//@Composable
-//fun PreviewHome18h() {
-//    MaMemoireTheme {
-//        HomeScreen(
-//            modifier = Modifier,
-//            hasNumber = true,
-//            todayEntry = GameEntry("2023-10-27", 1234, 1256, 2, 4),
-//            isEvening = true,
-//            fieldEnabled = false,
-//            answerInput = "1256",
-//            feedbackMessage = "Bravo ! Vous avez trouvé 2 chiffres sur 4.",
-//            digitsCount = 4,
-//            onAnswerChange = {},
-//            onSubmit = {}
-//        )
-//    }
-//}
+@Preview(showBackground = true, name = "7h - Pas de numéro")
+@Composable
+fun PreviewHome7h() {
+    MaMemoireTheme {
+        HomeScreen(
+            modifier = Modifier,
+            hasNumber = false,
+            todayEntry = null,
+            isEvening = false,
+            fieldEnabled = false,
+            answerInput = "",
+            feedbackMessage = null,
+            digitsCount = 4,
+            onAnswerChange = {},
+            onSubmit = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "8h - Numéro à découvrir")
+@Composable
+fun PreviewHome8h() {
+    MaMemoireTheme {
+        HomeScreen(
+            modifier = Modifier,
+            hasNumber = true,
+            todayEntry = null,
+            isEvening = false,
+            fieldEnabled = false,
+            answerInput = "",
+            feedbackMessage = null,
+            initialReveal = false,
+            isAlreadyRevealed = false,
+            digitsCount = 4,
+            onAnswerChange = {},
+            onSubmit = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "9h - Numéro découvert")
+@Composable
+fun PreviewHome9h() {
+    MaMemoireTheme {
+        HomeScreen(
+            modifier = Modifier,
+            hasNumber = true,
+            todayEntry = null,
+            isEvening = false,
+            fieldEnabled = false,
+            answerInput = "",
+            feedbackMessage = null,
+            initialReveal = true,
+            isAlreadyRevealed = false,
+            digitsCount = 4,
+            onAnswerChange = {},
+            onSubmit = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "18h - Défi réussi 50%")
+@Composable
+fun PreviewHome18h() {
+    MaMemoireTheme {
+        HomeScreen(
+            modifier = Modifier,
+            hasNumber = true,
+            todayEntry = GameEntry("2023-10-27", 1234, 1256, 2, 4),
+            isEvening = true,
+            fieldEnabled = false,
+            answerInput = "1256",
+            feedbackMessage = "Bravo ! Vous avez trouvé 2 chiffres sur 4.",
+            digitsCount = 4,
+            onAnswerChange = {},
+            onSubmit = {}
+        )
+    }
+}
