@@ -24,6 +24,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import com.moulis.mamemoire.ui.theme.MaMemoireTheme
 import com.moulis.mamemoire.HistoryCard
 import com.moulis.mamemoire.StatItem
@@ -54,16 +57,60 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
                 Text("Aucune partie enregistrée.", color = Color.Gray)
             }
         } else {
-            // Statistiques globales
+            // Statistiques des 30.5 derniers jours
             val answered = history.filter { it.playerAnswer != null }
-            if (answered.isNotEmpty()) {
-                val avgRatio = answered.map { it.ratioPercent }.average().toInt()
-                val wins     = answered.count { it.ratioPercent == 100 }
+            val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val now = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val fullLimit = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -29) }.time
+            val halfLimit = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -30) }.time
+
+            var weightedScore = 0.0
+            var weightedTotal = 0.0
+            var weightedWins  = 0.0
+            var weightedCount = 0.0
+
+            answered.forEach { entry ->
+                try {
+                    val d = dateFormat.parse(entry.date)
+                    if (d != null) {
+                        val weight = when {
+                            !d.before(fullLimit) -> 1.0
+                            !d.before(halfLimit) -> 0.5
+                            else -> 0.0
+                        }
+                        if (weight > 0.0) {
+                            weightedScore += entry.score * weight
+                            weightedTotal += entry.total * weight
+                            weightedCount += weight
+                            if (entry.score == entry.total) {
+                                weightedWins += weight
+                            }
+                        }
+                    }
+                } catch (_: Exception) { }
+            }
+
+            if (weightedCount > 0) {
+                val monthlyRatio = if (weightedTotal > 0) ((weightedScore * 100) / weightedTotal).toInt() else 0
+                val displayCount = if (weightedCount % 1.0 == 0.0) weightedCount.toInt().toString() else "%.1f".format(weightedCount)
+                val displayWins  = if (weightedWins % 1.0 == 0.0) weightedWins.toInt().toString() else "%.1f".format(weightedWins)
+
+//                Text(
+//                    text = "sur les 30 derniers jours",
+//                    fontSize = 16.sp,
+//                    fontWeight = FontWeight.SemiBold,
+//                    modifier = Modifier.padding(bottom = 8.dp)
+//                )
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
@@ -74,9 +121,9 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
                             .fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatItem(label = "Parties", value = "${answered.size}")
-                        StatItem(label = "Victoires", value = "$wins 🏆")
-                        StatItem(label = "Ratio moyen", value = "$avgRatio%")
+                        StatItem(label = "Défis", value = displayCount)
+                        StatItem(label = "Succès", value = "$displayWins 🏆")
+                        StatItem(label = "Ratio", value = "$monthlyRatio%")
                     }
                 }
             }
@@ -98,8 +145,8 @@ fun HistoryScreenPreview() {
     val sampleHistory = listOf(
         GameEntry("30/06/2026", 12345678, 12345678, 8, 8),
         GameEntry("31/06/2026", 123482, 123000, 3, 6),
-        GameEntry("01/07/2026", 9012, 1111, 0, 4)
-         )
+        GameEntry("01/07/2026", 9012, 1111, 0, 4),
+    )
     MaMemoireTheme {
         HistoryScreen(modifier = Modifier, history = sampleHistory)
     }
