@@ -28,9 +28,10 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import com.moulis.mamemoire.ui.theme.MaMemoireTheme
-import com.moulis.mamemoire.HistoryCard
 import com.moulis.mamemoire.StatItem
 import com.moulis.mamemoire.models.GameEntry
+import com.moulis.mamemoire.repositories.GameRepository
+
 
 @Composable
 fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
@@ -87,12 +88,24 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
                             weightedScore += entry.score * weight
                             weightedTotal += entry.total * weight
                             weightedCount += weight
-                            if (entry.score == entry.total) {
+                            if (entry.score == entry.total.toDouble()) {
                                 weightedWins += weight
                             }
                         }
                     }
                 } catch (_: Exception) { }
+            }
+
+            // Calcul de la meilleure série
+            var maxStreak = 0
+            var currentStreak = 0
+            answered.reversed().forEach { entry ->
+                if (entry.score == entry.total.toDouble()) {
+                    currentStreak++
+                    if (currentStreak > maxStreak) maxStreak = currentStreak
+                } else {
+                    currentStreak = 0
+                }
             }
 
             if (weightedCount > 0) {
@@ -121,9 +134,10 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
                             .fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatItem(label = "Défis", value = displayCount)
-                        StatItem(label = "Succès", value = "$displayWins 🏆")
-                        StatItem(label = "Ratio", value = "$monthlyRatio%")
+                        StatItem(label = "Défis 🎯", value = displayCount)
+                        StatItem(label = "Succès 🏆", value = "$displayWins")
+                        StatItem(label = "Ratio 📊", value = "$monthlyRatio%")
+                        StatItem(label = "Série 🔥", value = "$maxStreak")
                     }
                 }
             }
@@ -134,6 +148,76 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
                     HistoryCard(entry)
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            }
+        }
+    }
+}
+
+@Composable
+fun HistoryCard(entry: GameEntry) {
+    val ratio = if (entry.playerAnswer != null) {
+        GameRepository.calculateRatio(entry.score, entry.total)
+    } else 0
+
+    val correctCount = if (entry.playerAnswer != null) {
+        GameRepository.countCorrectDigits(entry.morningNumber, entry.playerAnswer, entry.total)
+    } else 0
+
+    val bgColor = when {
+        entry.playerAnswer == null -> Color(0xFF9E9E9E).copy(alpha = 0.08f)
+        ratio == 100  -> Color(0xFF4CAF50).copy(alpha = 0.10f)
+        ratio >= 50   -> Color(0xFFFF9800).copy(alpha = 0.10f)
+        else          -> Color(0xFFF44336).copy(alpha = 0.10f)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors   = CardDefaults.cardColors(containerColor = bgColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(text = entry.date, fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text       = "Nombre : ${entry.morningNumber.toString().padStart(entry.total, '0')}",
+                    fontWeight = FontWeight.Medium
+                )
+                if (entry.playerAnswer != null) {
+                    Text(
+                        text  = "Réponse : ${entry.playerAnswer.toString().padStart(entry.total, '0')}",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                } else {
+                    Text(text = "Sans réponse", fontSize = 13.sp, color = Color.Gray)
+                }
+            }
+
+            if (entry.playerAnswer != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text       = "$correctCount/${entry.total}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize   = 20.sp
+                    )
+                    Text(
+                        text     = "$ratio%",
+                        fontSize = 13.sp,
+                        color    = when {
+                            ratio == 100 -> Color(0xFF4CAF50)
+                            ratio >= 50  -> Color(0xFFFF9800)
+                            else         -> Color(0xFFF44336)
+                        }
+                    )
+                }
+            } else {
+                Text(text = "—", color = Color.Gray, fontSize = 20.sp)
             }
         }
     }
@@ -143,9 +227,12 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
 @Composable
 fun HistoryScreenPreview() {
     val sampleHistory = listOf(
-        GameEntry("30/06/2026", 12345678, 12345678, 8, 8),
-        GameEntry("31/06/2026", 123482, 123000, 3, 6),
-        GameEntry("01/07/2026", 9012, 1111, 0, 4),
+        GameEntry("28/06/2026", 12345678, 12345678, 8.0),
+        GameEntry("29/06/2026", 12345678, 12345678, 8.0),
+        GameEntry("30/06/2026", 12345678, 12345678, 8.0),
+        GameEntry("31/06/2026", 123482, 123000, 3.0),
+        GameEntry("01/07/2026", 9012, 1111, 0.0),
+        GameEntry("02/07/2026", 9012, 1188, 0.0),
     )
     MaMemoireTheme {
         HistoryScreen(modifier = Modifier, history = sampleHistory)

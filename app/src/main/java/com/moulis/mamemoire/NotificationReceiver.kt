@@ -163,8 +163,8 @@ class NotificationReceiver : BroadcastReceiver() {
 
         val morningNumber = GameRepository.getMorningNumber(context)
         val score         = GameRepository.calculateScore(morningNumber, playerAnswer, total)
-        val ratio         = (score * 100) / total
-        val isWon         = score == total
+        val ratio         = ((score * 100) / total).toInt()
+        val isWon         = score == total.toDouble()
 
         val resultMessage = buildResultMessage(morningNumber, playerAnswer, score, ratio, isWon, total)
 
@@ -182,17 +182,18 @@ class NotificationReceiver : BroadcastReceiver() {
     fun buildResultMessage(
         morningNumber: Int,
         playerAnswer: Int,
-        score: Int,
+        score: Double,
         ratio: Int,
         isWon: Boolean,
         total: Int
     ): String {
         val morningStr = morningNumber.toString().padStart(total, '0')
         val answerStr = playerAnswer.toString().padStart(total, '0')
+        val scoreStr = if (score % 1.0 == 0.0) score.toInt().toString() else score.toString()
         return if (isWon) {
             "Parfait ! Le nombre était bien $morningStr. 100% de réussite 🏆"
         } else {
-            "Le nombre était $morningStr, vous avez répondu $answerStr. $score/$total chiffres corrects ($ratio%)"
+            "Le nombre était $morningStr, vous avez répondu $answerStr. $scoreStr/$total chiffres corrects ($ratio%)"
         }
     }
 

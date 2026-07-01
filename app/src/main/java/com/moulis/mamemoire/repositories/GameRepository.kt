@@ -120,10 +120,54 @@ object GameRepository {
 
     // ─── Calcul du ratio ──────────────────────────────────────────────────────
 
-    fun calculateScore(morningNumber: Int, playerAnswer: Int, total: Int): Int {
-        val expected = morningNumber.toString().padStart(total, '0')
-        val given    = playerAnswer.toString().padStart(total, '0')
-        return expected.zip(given).count { (e, g) -> e == g }
+    fun calculateScore(morningNumber: Int, playerAnswer: Int, total: Int): Double {
+        val expected = morningNumber.toString().padStart(total, '0').toCharArray()
+        val given = playerAnswer.toString().padStart(total, '0').toCharArray()
+
+        val freq = IntArray(10)
+        var score = 0.0
+
+        var i = 0
+        while (i < total && i < expected.size) {
+            freq[expected[i] - '0']++
+            i++
+        }
+
+        i = 0
+        while (i < total && i < expected.size && i < given.size) {
+            if (given[i] == expected[i]) {
+                score += 1.0
+                freq[given[i] - '0']--
+            }
+            i++
+        }
+
+        i = 0
+        while (i < total && i < given.size) {
+            val c = given[i]
+            if (i < expected.size && c != expected[i] && freq[c - '0'] > 0) {
+                score += 0.5
+                freq[c - '0']--
+            }
+            i++
+        }
+
+        return score
+    }
+
+    fun calculateRatio(score: Double, total: Int): Int {
+        return if (total > 0) ((score * 100) / total).toInt() else 0
+    }
+
+    fun countCorrectDigits(morningNumber: Int, playerAnswer: Int, total: Int): Int {
+        val s1 = morningNumber.toString().padStart(total, '0')
+        val s2 = playerAnswer.toString().padStart(total, '0')
+        var count = 0
+        val len = minOf(s1.length, s2.length, total)
+        for (i in 0 until len) {
+            if (s1[i] == s2[i]) count++
+        }
+        return count
     }
 
     // ─── Sauvegarde d'une réponse ─────────────────────────────────────────────
@@ -142,8 +186,7 @@ object GameRepository {
             date          = today,
             morningNumber = morningNumber,
             playerAnswer  = playerAnswer,
-            score         = score,
-            total         = total
+            score         = score
         )
 
         val history = getHistory(context).toMutableList()
@@ -167,8 +210,7 @@ object GameRepository {
                     date          = obj.getString("date"),
                     morningNumber = obj.getInt("morningNumber"),
                     playerAnswer  = if (obj.isNull("playerAnswer")) null else obj.getInt("playerAnswer"),
-                    score         = obj.getInt("score"),
-                    total         = obj.optInt("total", 4)
+                    score         = obj.getDouble("score")
                 )
             }
         } catch (e: Exception) {

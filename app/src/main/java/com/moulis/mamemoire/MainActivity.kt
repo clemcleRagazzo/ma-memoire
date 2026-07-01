@@ -173,8 +173,8 @@ fun MemoryAppUI(
                         GameRepository.saveAnswer(context, playerAnswer)
                         val number = GameRepository.getMorningNumber(context)
                         val score  = GameRepository.calculateScore(number, playerAnswer, digitsCount)
-                        val ratio  = (score * 100) / digitsCount
-                        val isWon  = score == digitsCount
+                        val ratio  = ((score * 100) / digitsCount).toInt()
+                        val isWon  = score == digitsCount.toDouble()
                         feedbackMessage = NotificationReceiver().buildResultMessage(
                             number, playerAnswer, score, ratio, isWon, digitsCount
                         )
@@ -301,15 +301,16 @@ fun StatusCard(hasMorningNumber: Boolean, todayEntry: GameEntry?, isEvening: Boo
         todayEntry != null -> {
             val score = todayEntry.score
             val total = todayEntry.total
+            val scoreStr = if (score % 1.0 == 0.0) score.toInt().toString() else score.toString()
             val msg = when {
-                score == total -> "Parfait ! \n $score/$total chiffres trouvés 🏆"
-                score >= total / 2 -> "Bien joué ! \n $score/$total chiffres trouvés 🥈"
-                score > 0 -> "Un peu juste... \n $score/$total chiffre(s) trouvé(s) 🧱"
+                score == total.toDouble() -> "Parfait ! \n $scoreStr/$total chiffres trouvés 🏆"
+                score >= total.toDouble() / 2.0 -> "Bien joué ! \n $scoreStr/$total chiffres trouvés 🥈"
+                score > 0 -> "Un peu juste... \n $scoreStr/$total chiffre(s) trouvé(s) 🧱"
                 else -> "Échec ! \n 0/$total chiffre trouvé 😅"
             }
             val color = when {
-                score == total -> Color(0xFF4CAF50) // Vert
-                score >= total / 2 -> Color(0xFFFF9800) // Orange
+                score == total.toDouble() -> Color(0xFF4CAF50) // Vert
+                score >= total.toDouble() / 2.0 -> Color(0xFFFF9800) // Orange
                 else       -> Color(0xFFF44336) // Rouge
             }
             Triple("✅", "Défi complété : $msg", color.copy(alpha = 0.12f))
@@ -340,66 +341,5 @@ fun StatItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Text(text = label, fontSize = 12.sp, color = Color.Gray)
-    }
-}
-
-@Composable
-fun HistoryCard(entry: GameEntry) {
-    val bgColor = when {
-        entry.playerAnswer == null -> Color(0xFF9E9E9E).copy(alpha = 0.08f)
-        entry.ratioPercent == 100  -> Color(0xFF4CAF50).copy(alpha = 0.10f)
-        entry.ratioPercent >= 50   -> Color(0xFFFF9800).copy(alpha = 0.10f)
-        else                       -> Color(0xFFF44336).copy(alpha = 0.10f)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors   = CardDefaults.cardColors(containerColor = bgColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(text = entry.date, fontSize = 12.sp, color = Color.Gray)
-                Text(
-                    text       = "Nombre : ${entry.morningNumber.toString().padStart(entry.total, '0')}",
-                    fontWeight = FontWeight.Medium
-                )
-                if (entry.playerAnswer != null) {
-                    Text(
-                        text  = "Réponse : ${entry.playerAnswer.toString().padStart(entry.total, '0')}",
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                } else {
-                    Text(text = "Sans réponse", fontSize = 13.sp, color = Color.Gray)
-                }
-            }
-
-            if (entry.playerAnswer != null) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text       = "${entry.score}/${entry.total}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize   = 20.sp
-                    )
-                    Text(
-                        text     = "${entry.ratioPercent}%",
-                        fontSize = 13.sp,
-                        color    = when {
-                            entry.ratioPercent == 100 -> Color(0xFF4CAF50)
-                            entry.ratioPercent >= 50  -> Color(0xFFFF9800)
-                            else                      -> Color(0xFFF44336)
-                        }
-                    )
-                }
-            } else {
-                Text(text = "—", color = Color.Gray, fontSize = 20.sp)
-            }
-        }
     }
 }

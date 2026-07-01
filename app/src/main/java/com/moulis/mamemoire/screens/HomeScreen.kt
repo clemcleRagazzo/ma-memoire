@@ -208,7 +208,7 @@ fun PreviewHome18h() {
         HomeScreen(
             modifier = Modifier,
             hasNumber = true,
-            todayEntry = GameEntry("2023-10-27", 1234, 1256, 2, 4),
+            todayEntry = GameEntry("01/07/2026", 1234, 1256, 2.0),
             isEvening = true,
             fieldEnabled = false,
             answerInput = "1256",
