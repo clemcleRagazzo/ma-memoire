@@ -96,15 +96,31 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
                 } catch (_: Exception) { }
             }
 
-            // Calcul de la meilleure série
+            // Calcul de la meilleure série et identification des entrées concernées
             var maxStreak = 0
             var currentStreak = 0
-            answered.reversed().forEach { entry ->
+            var bestStreakEndIndex = -1
+
+            // On parcourt du plus vieux au plus récent pour calculer les séries
+            val answeredOldestFirst = answered.reversed()
+            answeredOldestFirst.forEachIndexed { index, entry ->
                 if (entry.score == entry.total.toDouble()) {
                     currentStreak++
-                    if (currentStreak > maxStreak) maxStreak = currentStreak
+                    if (currentStreak >= maxStreak) {
+                        maxStreak = currentStreak
+                        bestStreakEndIndex = index
+                    }
                 } else {
                     currentStreak = 0
+                }
+            }
+
+            // On crée une map pour associer chaque entrée de la meilleure série à son numéro de série
+            val bestStreakMap = mutableMapOf<GameEntry, Int>()
+            if (maxStreak > 0 && bestStreakEndIndex != -1) {
+                for (i in 0 until maxStreak) {
+                    val entry = answeredOldestFirst[bestStreakEndIndex - i]
+                    bestStreakMap[entry] = maxStreak - i
                 }
             }
 
@@ -145,17 +161,16 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
             // Liste
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(history) { entry ->
-                    HistoryCard(entry)
+                    HistoryCard(entry, streakNumber = bestStreakMap[entry])
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
-
             }
         }
     }
 }
 
 @Composable
-fun HistoryCard(entry: GameEntry) {
+fun HistoryCard(entry: GameEntry, streakNumber: Int? = null) {
     val ratio = if (entry.playerAnswer != null) {
         GameRepository.calculateRatio(entry.score, entry.total)
     } else 0
@@ -200,21 +215,38 @@ fun HistoryCard(entry: GameEntry) {
             }
 
             if (entry.playerAnswer != null) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text       = "$correctCount/${entry.total}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize   = 20.sp
-                    )
-                    Text(
-                        text     = "$ratio%",
-                        fontSize = 13.sp,
-                        color    = when {
-                            ratio == 100 -> Color(0xFF4CAF50)
-                            ratio >= 50  -> Color(0xFFFF9800)
-                            else         -> Color(0xFFF44336)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (streakNumber != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(end = 12.dp)
+                        ) {
+                            Text(
+                                text = streakNumber.toString(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF5722)
+                            )
+                            Text(text = "🔥", fontSize = 20.sp)
                         }
-                    )
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text       = "$correctCount/${entry.total}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 20.sp
+                        )
+                        Text(
+                            text     = "$ratio%",
+                            fontSize = 13.sp,
+                            color    = when {
+                                ratio == 100 -> Color(0xFF4CAF50)
+                                ratio >= 50  -> Color(0xFFFF9800)
+                                else         -> Color(0xFFF44336)
+                            }
+                        )
+                    }
                 }
             } else {
                 Text(text = "—", color = Color.Gray, fontSize = 20.sp)
@@ -227,12 +259,12 @@ fun HistoryCard(entry: GameEntry) {
 @Composable
 fun HistoryScreenPreview() {
     val sampleHistory = listOf(
-        GameEntry("28/06/2026", 12345678, 12345678, 8.0),
-        GameEntry("29/06/2026", 12345678, 12345678, 8.0),
-        GameEntry("30/06/2026", 12345678, 12345678, 8.0),
+        GameEntry("02/07/2026", 9012, 5877, 0.0),
+        GameEntry("01/07/2026", 9012, 9012, 4.0),
         GameEntry("31/06/2026", 123482, 123000, 3.0),
-        GameEntry("01/07/2026", 9012, 1111, 0.0),
-        GameEntry("02/07/2026", 9012, 1188, 0.0),
+        GameEntry("30/06/2026", 12345678, 12345678, 8.0),
+        GameEntry("29/06/2026", 12345678, 12345678, 8.0),
+        GameEntry("28/06/2026", 12345678, 12345678, 8.0),
     )
     MaMemoireTheme {
         HistoryScreen(modifier = Modifier, history = sampleHistory)
