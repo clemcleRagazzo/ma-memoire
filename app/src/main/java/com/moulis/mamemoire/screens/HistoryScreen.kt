@@ -16,6 +16,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +33,80 @@ import com.moulis.mamemoire.StatItem
 import com.moulis.mamemoire.models.GameEntry
 import com.moulis.mamemoire.repositories.GameRepository
 
+private data class HistoryStats(
+    val weightedScore: Double,
+    val weightedTotal: Double,
+    val weightedWins: Double,
+    val weightedCount: Double,
+    val maxStreak: Int,
+    val bestStreakMap: Map<GameEntry, Int>
+)
+
+private val historyDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+private fun computeHistoryStats(answered: List<GameEntry>): HistoryStats {
+    val now = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val fullLimit = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -29) }.time
+    val halfLimit = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -30) }.time
+
+    var weightedScore = 0.0
+    var weightedTotal = 0.0
+    var weightedWins  = 0.0
+    var weightedCount = 0.0
+
+    answered.forEach { entry ->
+        try {
+            val d = historyDateFormat.parse(entry.date)
+            if (d != null) {
+                val weight = when {
+                    !d.before(fullLimit) -> 1.0
+                    !d.before(halfLimit) -> 0.5
+                    else -> 0.0
+                }
+                if (weight > 0.0) {
+                    weightedScore += entry.score * weight
+                    weightedTotal += entry.total * weight
+                    weightedCount += weight
+                    if (entry.score == entry.total.toDouble()) {
+                        weightedWins += weight
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+    }
+
+    var maxStreak = 0
+    var currentStreak = 0
+    var bestStreakEndIndex = -1
+
+    val answeredOldestFirst = answered.reversed()
+    answeredOldestFirst.forEachIndexed { index, entry ->
+        if (entry.score == entry.total.toDouble()) {
+            currentStreak++
+            if (currentStreak >= maxStreak) {
+                maxStreak = currentStreak
+                bestStreakEndIndex = index
+            }
+        } else {
+            currentStreak = 0
+        }
+    }
+
+    val bestStreakMap = mutableMapOf<GameEntry, Int>()
+    if (maxStreak > 0 && bestStreakEndIndex != -1) {
+        for (i in 0 until maxStreak) {
+            val entry = answeredOldestFirst[bestStreakEndIndex - i]
+            bestStreakMap[entry] = maxStreak - i
+        }
+    }
+
+    return HistoryStats(weightedScore, weightedTotal, weightedWins, weightedCount, maxStreak, bestStreakMap)
+}
 
 @Composable
 fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
@@ -59,76 +134,12 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
             }
         } else {
             // Statistiques des 30.5 derniers jours
-            val answered = history.filter { it.playerAnswer != null }
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val now = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val fullLimit = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -29) }.time
-            val halfLimit = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -30) }.time
+            val answered = remember(history) { history.filter { it.playerAnswer != null } }
+            val stats = remember(answered) { computeHistoryStats(answered) }
 
-            var weightedScore = 0.0
-            var weightedTotal = 0.0
-            var weightedWins  = 0.0
-            var weightedCount = 0.0
-
-            answered.forEach { entry ->
-                try {
-                    val d = dateFormat.parse(entry.date)
-                    if (d != null) {
-                        val weight = when {
-                            !d.before(fullLimit) -> 1.0
-                            !d.before(halfLimit) -> 0.5
-                            else -> 0.0
-                        }
-                        if (weight > 0.0) {
-                            weightedScore += entry.score * weight
-                            weightedTotal += entry.total * weight
-                            weightedCount += weight
-                            if (entry.score == entry.total.toDouble()) {
-                                weightedWins += weight
-                            }
-                        }
-                    }
-                } catch (_: Exception) { }
-            }
-
-            // Calcul de la meilleure série et identification des entrées concernées
-            var maxStreak = 0
-            var currentStreak = 0
-            var bestStreakEndIndex = -1
-
-            // On parcourt du plus vieux au plus récent pour calculer les séries
-            val answeredOldestFirst = answered.reversed()
-            answeredOldestFirst.forEachIndexed { index, entry ->
-                if (entry.score == entry.total.toDouble()) {
-                    currentStreak++
-                    if (currentStreak >= maxStreak) {
-                        maxStreak = currentStreak
-                        bestStreakEndIndex = index
-                    }
-                } else {
-                    currentStreak = 0
-                }
-            }
-
-            // On crée une map pour associer chaque entrée de la meilleure série à son numéro de série
-            val bestStreakMap = mutableMapOf<GameEntry, Int>()
-            if (maxStreak > 0 && bestStreakEndIndex != -1) {
-                for (i in 0 until maxStreak) {
-                    val entry = answeredOldestFirst[bestStreakEndIndex - i]
-                    bestStreakMap[entry] = maxStreak - i
-                }
-            }
-
-            if (weightedCount > 0) {
-                val monthlyRatio = if (weightedTotal > 0) ((weightedScore * 100) / weightedTotal).toInt() else 0
-                val displayCount = if (weightedCount % 1.0 == 0.0) weightedCount.toInt().toString() else "%.1f".format(weightedCount)
-                val displayWins  = if (weightedWins % 1.0 == 0.0) weightedWins.toInt().toString() else "%.1f".format(weightedWins)
-
+                val monthlyRatio = if (stats.weightedTotal > 0) ((stats.weightedScore * 100) / stats.weightedTotal).toInt() else 0
+                val displayCount = if (stats.weightedCount % 1.0 == 0.0) stats.weightedCount.toInt().toString() else "%.1f".format(stats.weightedCount)
+                val displayWins  = if (stats.weightedWins % 1.0 == 0.0) stats.weightedWins.toInt().toString() else "%.1f".format(stats.weightedWins)
 //                Text(
 //                    text = "sur les 30 derniers jours",
 //                    fontSize = 16.sp,
@@ -136,33 +147,32 @@ fun HistoryScreen(modifier: Modifier, history: List<GameEntry>) {
 //                    modifier = Modifier.padding(bottom = 8.dp)
 //                )
 
-                Card(
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        StatItem(label = "Défis 🎯", value = displayCount)
-                        StatItem(label = "Succès 🏆", value = "$displayWins")
-                        StatItem(label = "Ratio 📊", value = "$monthlyRatio%")
-                        StatItem(label = "Série 🔥", value = "$maxStreak")
-                    }
+                    StatItem(label = "Défis 🎯", value = displayCount)
+                    StatItem(label = "Succès 🏆", value = "$displayWins")
+                    StatItem(label = "Ratio 📊", value = "$monthlyRatio%")
+                    StatItem(label = "Série 🔥", value = "${stats.maxStreak}")
                 }
             }
 
             // Liste
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(history) { entry ->
-                    HistoryCard(entry, streakNumber = bestStreakMap[entry])
-                }
+                HistoryCard(entry, streakNumber = stats.bestStreakMap[entry])
+            }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }

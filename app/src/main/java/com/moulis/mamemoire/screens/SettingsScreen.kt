@@ -51,7 +51,7 @@ fun SettingsScreen(
     onThemeChanged: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var digitsCount by remember { mutableFloatStateOf(GameRepository.getDigitsCount(context).toFloat()) }
+    var digitsCount by remember { mutableFloatStateOf(GameRepository.getDigitsSetting(context).toFloat()) }
     var morningHour by remember { mutableIntStateOf(GameRepository.getMorningHour(context)) }
     var eveningHour by remember { mutableIntStateOf(GameRepository.getEveningHour(context)) }
     
@@ -273,7 +273,7 @@ fun SettingsScreen(
         }
 
         Text(
-            text = "Version 1.1.0",
+            text = "Version 1.2.0",
             fontSize = 12.sp,
             color = Color.Gray,
             modifier = Modifier.padding(top = 24.dp)

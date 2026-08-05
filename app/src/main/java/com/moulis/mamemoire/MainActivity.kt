@@ -113,12 +113,9 @@ fun MemoryAppUI(
     var history by remember { mutableStateOf(GameRepository.getHistory(context)) }
     var answerInput by remember { mutableStateOf("") }
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
-    val digitsCount = GameRepository.getDigitsCount(context)
+    val digitsCount = GameRepository.getTodayChallengeDigits(context)
 
-    val todayEntry = history.find { 
-        val today = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-        it.date == today && it.playerAnswer != null 
-    }
+    val todayEntry = remember(history) { GameRepository.getTodayEntry(context) }
     val hasNumber = GameRepository.todayHasMorningNumber(context)
     val alreadyAnswered  = todayEntry != null
     val isEvening        = forceEvening || isEveningTime(context)
@@ -163,8 +160,8 @@ fun MemoryAppUI(
                 answerInput     = answerInput,
                 feedbackMessage = feedbackMessage,
                 initialReveal   = initialReveal,
-                digitsCount     = digitsCount,
                 onAnswerChange  = { answerInput = it },
+                digitsCount = digitsCount,
                 onSubmit        = {
                     val playerAnswer = answerInput.toIntOrNull()
                     if (playerAnswer == null || answerInput.length != digitsCount) {

@@ -74,12 +74,13 @@ fun HomeScreen(
         // ── Statut du jour ──
         val alreadyAnswered = todayEntry != null
         val morningNumber = GameRepository.getMorningNumber(context)
+        val currentDigitsCount = digitsCount
 
         if (hasNumber && !alreadyAnswered && !revealed) {
             RevealableNumberCard(
                 number = morningNumber,
                 initiallyRevealed = initialReveal,
-                total = digitsCount
+                total = currentDigitsCount
             )
         } else {
             StatusCard(hasNumber, todayEntry, isEvening)
@@ -94,14 +95,14 @@ fun HomeScreen(
 
         OutlinedTextField(
             value         = answerInput,
-            onValueChange = { if (it.length <= digitsCount && it.all(Char::isDigit)) onAnswerChange(it) },
+            onValueChange = { if (it.length <= currentDigitsCount && it.all(Char::isDigit)) onAnswerChange(it) },
             label         = {
                 val eveningHour = GameRepository.getEveningHour(context)
                 Text(
                     if (!hasNumber) "Aucun nombre reçu ce matin"
                     else if (!isEvening)   "Disponible à partir de ${eveningHour}h"
                     else if (alreadyAnswered) "Déjà répondu : $morningNumber"
-                    else "Entrez les $digitsCount chiffres"
+                    else "Entrez les $currentDigitsCount chiffres"
                 )
             },
             enabled              = fieldEnabled,
@@ -112,7 +113,7 @@ fun HomeScreen(
 
         Button(
             onClick  = onSubmit,
-            enabled  = fieldEnabled && answerInput.length == digitsCount,
+            enabled  = fieldEnabled && answerInput.length == currentDigitsCount,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Valider ma réponse")
@@ -201,9 +202,47 @@ fun PreviewHome9h() {
     }
 }
 
-@Preview(showBackground = true, name = "18h - Défi réussi 50%")
+@Preview(showBackground = true, name = "18h - En attente de réponse")
+@Composable
+fun PreviewHome18hPending() {
+    MaMemoireTheme {
+        HomeScreen(
+            modifier = Modifier,
+            hasNumber = true,
+            todayEntry = null,
+            isEvening = true,
+            fieldEnabled = true,
+            answerInput = "",
+            feedbackMessage = null,
+            digitsCount = 4,
+            onAnswerChange = {},
+            onSubmit = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "18h - Réponse saisie")
 @Composable
 fun PreviewHome18h() {
+    MaMemoireTheme {
+        HomeScreen(
+            modifier = Modifier,
+            hasNumber = true,
+            todayEntry = null,
+            isEvening = true,
+            fieldEnabled = true,
+            answerInput = "12",
+            feedbackMessage = null,
+            digitsCount = 4,
+            onAnswerChange = {},
+            onSubmit = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "19h - Défi réussi 50%")
+@Composable
+fun PreviewHome19h() {
     MaMemoireTheme {
         HomeScreen(
             modifier = Modifier,

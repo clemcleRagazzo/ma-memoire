@@ -52,9 +52,8 @@ class NotificationReceiver : BroadcastReceiver() {
     }
 
     // ─── Matin ────────────────────────────────────────────────────────────────
-
     private fun sendMorningNotification(context: Context) {
-        val total = GameRepository.getDigitsCount(context)
+        val total = GameRepository.getDigitsSetting(context)
         val min = Math.pow(10.0, (total - 1).toDouble()).toInt()
         val max = Math.pow(10.0, total.toDouble()).toInt() - 1
         val randomNumber = (min..max).random()
@@ -148,7 +147,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val replyText = bundle.getCharSequence(KEY_REPLY_TEXT)?.toString()?.trim() ?: return
 
         val playerAnswer = replyText.toIntOrNull()
-        val total = GameRepository.getMorningNumber(context).toString().length
+        val total = GameRepository.getTodayChallengeDigits(context)
         if (playerAnswer == null || replyText.length != total) {
             showNotification(
                 context,

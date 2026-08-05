@@ -22,6 +22,8 @@ object GameRepository {
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
+    private var historyCache: List<GameEntry>? = null
+
     // ─── Theme ────────────────────────────────────────────────────────────────
 
     fun getThemeMode(context: Context): String {
@@ -85,7 +87,8 @@ object GameRepository {
 
     // ─── Paramètres ───────────────────────────────────────────────────────────
 
-    fun getDigitsCount(context: Context): Int {
+    // Réglage utilisateur : nombre de chiffres pour le PROCHAIN tirage
+    fun getDigitsSetting(context: Context): Int {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getInt(KEY_DIGITS_COUNT, 4)
     }
@@ -94,6 +97,14 @@ object GameRepository {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putInt(KEY_DIGITS_COUNT, count)
         }
+    }
+
+    fun getTodayChallengeDigits(context: Context): Int {
+        if (todayHasMorningNumber(context)) {
+            return getMorningNumber(context).toString().length
+        }
+        getTodayEntry(context)?.let { return it.total }
+        return getDigitsSetting(context) // aucun tirage aujourd'hui -> valeur d'affichage par défaut
     }
 
     fun getMorningHour(context: Context): Int {
@@ -179,7 +190,7 @@ object GameRepository {
         if (morningNumber == -1) return
 
         val today = dateFormat.format(Date())
-        val total = getDigitsCount(context)
+        val total = getTodayChallengeDigits(context)
         val score = calculateScore(morningNumber, playerAnswer, total)
 
         val entry = GameEntry(
@@ -233,5 +244,6 @@ object GameRepository {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putString(KEY_HISTORY, array.toString())
         }
+        historyCache = history
     }
 }
